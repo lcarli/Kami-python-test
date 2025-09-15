@@ -39,7 +39,7 @@ async def start_hybrid():
         runner = await hybrid_bot.start_server()
         
         # Wait for server to be ready
-        print("⏳ Waiting for Hybrid Bot...")
+        print("Waiting for Hybrid Bot...")
         await asyncio.sleep(3)
         
         print("Hybrid Bot is ready!")

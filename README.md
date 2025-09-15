@@ -1,18 +1,17 @@
-# KAMI Bot - AI-Powered Voice Bot with Azure Services
+# KAMI Bot - Hybrid AI Voice & Text Assistant
 
-KAMI (Knowledge and Azure Multilingual Intelligence) is an AI-powered conversational bot built with Microsoft Bot Framework and Azure AI Services. It features advanced voice capabilities, real-time chat, and intelligent responses powered by GPT-4o.
+KAMI (Knowledge and Azure Multilingual Intelligence) is an AI-powered hybrid conversational assistant that seamlessly combines text chat and voice conversation in one unified interface. Built with Azure AI Foundry and Azure Voice Live API, KAMI provides intelligent responses through both text and real-time voice interaction.
 
 ## ✨ Features
 
-- **🧠 Intelligent AI**: GPT-4o powered responses using Azure AI Services
-- **🎤 Voice Input**: Speech-to-text recognition with multilingual support
-- **🔊 Voice Output**: Natural text-to-speech synthesis
-- **💬 Real-time Chat**: Interactive web interface with modern UI
-- **🌐 Web Client**: Full-featured browser-based interface
-- **🔄 Dual SDK Support**: Automatic detection between Azure AI Services and AI Foundry
-- **📱 Cross-platform**: Runs on Windows, macOS, and Linux
-- **🛡️ Secure**: Environment-based credential management
-- **⚡ Easy Setup**: One-command launch scripts
+- **� AI-Powered**: Intelligent responses using Azure AI Foundry agent
+- **�️ Hybrid Interface**: Seamless switching between text and voice conversation
+- **�️ Voice Live API**: Real-time voice conversation with Azure Voice Live
+- **💬 Text Chat**: Traditional text-based conversation interface
+- **🔄 Unified Experience**: Single interface for both text and voice interactions
+- **🌐 Web Interface**: Modern browser-based hybrid interface
+- **⚡ One-Click Launch**: Single command starts everything
+- **🛡️ Secure**: Environment-based Azure credential management
 
 ## 🚀 Quick Start
 
@@ -26,51 +25,57 @@ pip install -r requirements.txt
 ### 2. Configure Environment
 Create a `.env` file with your Azure credentials:
 ```env
-AZURE_SPEECH_KEY=your_speech_service_key
-AZURE_SPEECH_REGION=your_region
-AZURE_AI_API_KEY=your_ai_service_key
-AZURE_AI_ENDPOINT=https://your-ai-service.cognitiveservices.azure.com/
+# Azure AI Foundry (Required for intelligent responses)
+AI_FOUNDRY_AGENT_ID=your_agent_id
+AI_FOUNDRY_PROJECT_NAME=your_project_name
+AZURE_CLIENT_ID=your_client_id
+AZURE_CLIENT_SECRET=your_client_secret
+AZURE_TENANT_ID=your_tenant_id
+
+# Azure Voice Live API (Required for voice conversation)
+AZURE_VOICE_LIVE_ENDPOINT=https://your-endpoint.cognitiveservices.azure.com/
+AZURE_VOICE_LIVE_KEY=your_voice_live_key
 ```
 
-### 3. Launch Everything
+### 3. Launch Hybrid Bot
 ```bash
-# Python launcher (recommended)
 python start_all.py
-
-# Or PowerShell
-./start_all.ps1
-
-# Or Batch file
-start_all.bat
 ```
 
-### 4. Start Chatting
-- Open your browser to: `http://localhost:8080/voice-client.html`
-- Click the microphone 🎤 to use voice
-- Type messages in the chat field
-- Enjoy AI-powered conversations!
+### 4. Start Conversing
+- Browser automatically opens to: `http://localhost:3978/hybrid`
+- Type messages for text chat
+- Click "Start Voice" for voice conversation
+- Seamlessly switch between text and voice modes
+- Enjoy AI-powered hybrid conversations!
 
 ## 📋 Prerequisites
 
 - **Python 3.8+** - `python --version`
 - **pip** - Package manager
-- **Azure Speech Service** - For voice capabilities
-- **Azure AI Services** - For GPT-4o responses
-- **Modern web browser** - Chrome/Edge recommended for voice features
+- **Azure AI Foundry** - For intelligent AI agent responses
+- **Azure Voice Live API** - For real-time voice conversation
+- **Modern web browser** - Chrome/Edge recommended for best experience
 
 ## ⚙️ Azure Setup
 
-### Azure AI Services (Required for AI responses)
-1. Create an **Azure AI Services** resource in Azure Portal
-2. Deploy a **GPT-4o** model
-3. Copy the **API Key** and **Endpoint URL**
-4. Add to your `.env` file
-   - Note the **Key** and **Region** from the resource
+### Azure AI Foundry (Required for AI responses)
+1. Visit [Azure AI Foundry](https://ai.azure.com/)
+2. Create or access your AI hub and project
+3. Create an AI agent (assistant) in your project
+4. Copy the **Agent ID** (starts with "asst_")
+5. Copy the **Project Name**
+6. Create service principal credentials for authentication
 
-2. **Get AI Foundry Access** (Optional for advanced features):
-   - Visit [AI Foundry](https://ai.azure.com/)
-   - Create or access your AI hub
-   - Get endpoint and key information
+### Azure Voice Live API (Required for voice conversation)
+1. Create an **Azure Voice Live** resource in Azure Portal
+2. Copy the **Endpoint URL** and **API Key**
+3. Ensure Voice Live is configured for your AI Foundry project
+
+### Setting up Azure Credentials
+1. Create an **App Registration** in Azure AD
+2. Copy the **Client ID**, **Client Secret**, and **Tenant ID**
+3. Grant appropriate permissions to access AI Foundry and Voice Live services
 
 ### Verifying Prerequisites
 
@@ -115,136 +120,138 @@ pip install -r requirements.txt
 
 ## Configuration
 
-The bot uses environment variables for configuration. For local development, basic bot functionality works with fallback responses, but AI features require Azure AI Foundry setup and voice features require Azure Speech Service setup.
+The hybrid bot uses environment variables for Azure service configuration. All features require proper Azure AI Foundry and Voice Live API setup.
 
 ### Environment Variables
 
-| Variable | Description | Default | Required for AI |
-|----------|-------------|---------|----------------|
-| `MicrosoftAppId` | Bot application ID from Azure | `""` (empty) | No |
-| `MicrosoftAppPassword` | Bot application password from Azure | `""` (empty) | No |
-| `PORT` | Server port | `3978` | No |
-| `AZURE_AI_ENDPOINT` | Azure AI Foundry endpoint URL | `""` (empty) | **Yes** |
-| `AZURE_AI_API_KEY` | Azure AI Foundry API key | `""` (empty) | **Yes** |
-| `AZURE_AI_MODEL_DEPLOYMENT_NAME` | AI model deployment name | `gpt-4o-mini` | No |
-| `AZURE_SPEECH_KEY` | Azure Speech Service subscription key | `""` (empty) | For Voice |
-| `AZURE_SPEECH_REGION` | Azure Speech Service region | `""` (empty) | For Voice |
-| `AZURE_VOICE_LIVE_ENDPOINT` | Voice Live endpoint (optional) | `""` (empty) | No |
-| `AZURE_VOICE_LIVE_KEY` | Voice Live key (optional) | `""` (empty) | No |
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `AI_FOUNDRY_AGENT_ID` | Azure AI Foundry agent ID (starts with "asst_") | **Yes** |
+| `AI_FOUNDRY_PROJECT_NAME` | Azure AI Foundry project name | **Yes** |
+| `AZURE_CLIENT_ID` | Azure service principal client ID | **Yes** |
+| `AZURE_CLIENT_SECRET` | Azure service principal client secret | **Yes** |
+| `AZURE_TENANT_ID` | Azure tenant ID | **Yes** |
+| `AZURE_VOICE_LIVE_ENDPOINT` | Azure Voice Live API endpoint | **Yes** |
+| `AZURE_VOICE_LIVE_KEY` | Azure Voice Live API key | **Yes** |
+| `PORT` | Server port | No (default: 3978) |
 
-### Local Development Configuration
+### Complete .env File Example
 
-For basic bot testing, you can run without any environment variables. The bot will use fallback responses when AI services are not configured.
-
-#### AI Features Configuration
-
-To enable intelligent AI responses, you **must** set the Azure AI Foundry credentials:
+Create a `.env` file in the project root:
 
 ```bash
-# Required for AI features
-export AZURE_AI_ENDPOINT="https://your-project.cognitiveservices.azure.com/"
-export AZURE_AI_API_KEY="your_ai_api_key"
-export AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"  # Optional, defaults to gpt-4o-mini
-```
+# Azure AI Foundry Configuration
+AI_FOUNDRY_AGENT_ID=asst_R0j0hoILsRKk7BSRKQhF9IrE
+AI_FOUNDRY_PROJECT_NAME=KamiProject
 
-#### Voice Features Configuration
+# Azure Authentication
+AZURE_CLIENT_ID=your-client-id-here
+AZURE_CLIENT_SECRET=your-client-secret-here
+AZURE_TENANT_ID=your-tenant-id-here
 
-To enable voice capabilities, you **must** set the Azure Speech Service credentials:
-
-```bash
-# Required for voice features
-export AZURE_SPEECH_KEY="your_speech_service_key"
-export AZURE_SPEECH_REGION="your_speech_service_region"  # e.g., "eastus"
-```
-
-#### Complete .env File Example
-
-Create a `.env` file (not tracked by git) for local development:
-
-```bash
-# .env file - Basic bot configuration (optional)
-MicrosoftAppId=
-MicrosoftAppPassword=
-PORT=3978
-
-# Azure AI Foundry (required for intelligent responses)
-AZURE_AI_ENDPOINT=https://your-project.cognitiveservices.azure.com/
-AZURE_AI_API_KEY=your_ai_api_key_here
-AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
-
-# Azure Speech Service (required for voice features)
-AZURE_SPEECH_KEY=your_speech_service_key_here
-AZURE_SPEECH_REGION=eastus
-
-# AI Foundry Voice Live (optional for advanced features)
+# Azure Voice Live API
 AZURE_VOICE_LIVE_ENDPOINT=https://your-endpoint.cognitiveservices.azure.com/
-AZURE_VOICE_LIVE_KEY=your_voice_live_key_here
+AZURE_VOICE_LIVE_KEY=your-voice-live-key-here
+
+# Optional: Server Configuration
+PORT=3978
 ```
 
-## Running the Bot Locally
+## Running the Hybrid Bot
 
-### Option 1: Using the main application (app.py)
+### Using the startup script (recommended)
 
 ```bash
-python app.py
+python start_all.py
 ```
 
-### Option 2: Using the startup script (start_bot.py)
-
-The startup script provides more user-friendly output:
-
-```bash
-python start_bot.py
-```
+The bot will automatically:
+- Start the hybrid server on port 3978
+- Open your browser to the hybrid interface
+- Display service status and features
 
 ### Expected Output
 
 When the bot starts successfully, you should see:
 
 ```
-Starting Echo Bot...
-Bot will be available at: http://localhost:3978/api/messages
-Press CTRL+C to stop the bot
-======== Running on http://localhost:3978 ========
-(Press CTRL+C to quit)
+KAMI HYBRID BOT
+==================================================
+AI-Powered Text & Voice Conversation
+Azure Voice Live Integration
+Seamless Hybrid Interface
+==================================================
+
+Starting Kami Hybrid Bot...
+Waiting for Hybrid Bot...
+Hybrid Bot is ready!
+
+SERVICE STATUS:
+----------------------------------------
+Kami Hybrid Bot: RUNNING
+   • Text Chat: http://localhost:3978
+   • Voice Live: http://localhost:3978/hybrid
+
+FEATURES:
+• Text chat with AI agent
+• Voice Live conversation with Azure
+• Seamless switching between text and voice
+• AI-powered responses
+
+⌨CONTROLS:
+• Ctrl+C: Stop server
+
+Browser opened to http://localhost:3978/hybrid
+Kami Hybrid Bot started successfully!
+Ready for text and voice conversations!
 ```
 
-The bot will be running and listening for messages on `http://localhost:3978/api/messages`.
+## Using the Hybrid Interface
 
-## Testing the Bot
+### Text Chat
+1. **Type messages** in the chat input field
+2. **Press Enter** or click Send to send messages
+3. **Receive AI responses** from your Azure AI Foundry agent
+4. **View conversation history** in the chat area
 
-### Running Unit Tests
+### Voice Live Conversation
+1. **Click "Start Voice"** to begin voice session
+2. **Speak naturally** - your voice is processed in real-time
+3. **Listen to AI responses** through voice synthesis
+4. **Click "Stop Voice"** to end voice session and return to text
 
-The project includes unit tests to verify bot functionality:
+### Seamless Switching
+- Switch between text and voice modes at any time
+- Conversation context is maintained across modes
+- Both modes use the same Azure AI Foundry agent
 
-```bash
-# Run all tests
-python test_bot.py
+## Testing the Hybrid Bot
 
-# For verbose output
-python -m unittest test_bot.py -v
-```
+### Testing Text Chat
+1. **Start the bot**: `python start_all.py`
+2. **Open browser** to `http://localhost:3978/hybrid`
+3. **Type messages** in the chat input field
+4. **Verify AI responses** from Azure AI Foundry agent
 
-### Testing AI Features
+### Testing Voice Live
+1. **Click "Start Voice"** in the hybrid interface
+2. **Grant microphone permissions** when prompted by browser
+3. **Speak to test** real-time voice conversation
+4. **Verify voice responses** from Azure Voice Live API
+5. **Check console output** for Voice Live service status
 
-The enhanced bot includes several AI-powered features:
+### Testing Environment Configuration
+The bot will display configuration status on startup:
+- AI Foundry agent connection status
+- Voice Live API availability
+- Required environment variables validation
 
-1. **Basic Text Interaction**: Send any text message to get an intelligent AI response
-2. **Voice Commands**:
-   - `/voice` - Enable voice session for voice responses  
-   - `/voices` - List available neural voices
-   - `/help` - Show all available commands and service status
-3. **Audio Messages**: Send audio attachments to test speech-to-text with AI responses (when properly configured)
-
-### Testing with Bot Framework Emulator
-
-1. **Download and install** the [Bot Framework Emulator](https://github.com/Microsoft/BotFramework-Emulator/releases)
-2. **Start the bot** using one of the methods above
-3. **Open Bot Framework Emulator**
-4. **Connect to** `http://localhost:3978/api/messages`
-5. **Test basic functionality**: Send text messages and see AI-powered responses
-6. **Test voice commands**: Try `/voice`, `/voices`, and `/help` commands
-7. **Monitor console output** for AI service and voice service status messages
+### Testing Hybrid Mode Switching
+1. **Start with text chat** - send a few messages
+2. **Switch to voice mode** - click "Start Voice"
+3. **Continue conversation by voice** - speak naturally
+4. **Switch back to text** - click "Stop Voice"
+5. **Verify context preservation** across modes
 
 ### Testing Voice Features with Real Audio
 
@@ -387,60 +394,63 @@ If you encounter issues not covered here:
 ## Project Structure
 
 ```
-├── app.py              # Main application entry point and web server setup
-├── bot.py              # AI-powered bot class with voice capabilities  
-├── ai_agent_service.py # Azure AI Foundry integration for intelligent responses
-├── voice_service.py    # Azure Speech Service integration and Voice Live Agent
+├── hybrid_bot.py       # Main hybrid interface with text chat and voice live integration
+├── voice_live_service.py # Azure Voice Live API implementation
+├── ai_agent_service.py # Azure AI Foundry agent integration
+├── bot.py              # Core bot logic and conversation handling
 ├── config.py           # Configuration settings and environment variables
-├── start_bot.py        # Alternative startup script with user-friendly output
-├── test_bot.py         # Unit tests for bot functionality
-├── requirements.txt    # Python dependencies including Azure AI and Speech Services
+├── start_all.py        # Main startup script for hybrid mode
+├── requirements.txt    # Python dependencies
+├── prompt_kami.md      # AI agent prompt configuration
 ├── .gitignore         # Git ignore file
 └── README.md          # This documentation file
 ```
 
 ### File Descriptions
 
-- **`app.py`**: Sets up the aiohttp web server, Bot Framework adapter, and handles incoming HTTP requests
-- **`bot.py`**: Contains the AI-powered bot class with voice capabilities, supporting both text and voice interactions with intelligent responses
-- **`ai_agent_service.py`**: Implements Azure AI Foundry integration for generating intelligent responses instead of simple echoing
-- **`voice_service.py`**: Implements Azure Speech Service integration including speech-to-text, text-to-speech, and Voice Live Agent functionality
-- **`config.py`**: Manages configuration settings using environment variables with Azure AI Foundry and Speech Service settings
-- **`start_bot.py`**: Alternative entry point that provides more user-friendly startup messages
-- **`test_bot.py`**: Unit tests using Python's `unittest` framework to validate bot functionality
+- **`hybrid_bot.py`**: Main application providing unified interface for text chat and voice conversation with seamless mode switching
+- **`voice_live_service.py`**: Complete Azure Voice Live API implementation with real-time voice processing and AI Foundry agent integration
+- **`ai_agent_service.py`**: Handles Azure AI Foundry agent communication for intelligent responses in both text and voice modes
+- **`bot.py`**: Core bot framework logic supporting conversation management and message processing
+- **`config.py`**: Manages all configuration settings including Azure credentials and service endpoints
+- **`start_all.py`**: Simplified launcher that starts the hybrid bot interface directly
+- **`prompt_kami.md`**: Contains the AI agent personality and behavior configuration
 
 ## How It Works
 
-### AI-Powered Bot Framework Architecture
+### Hybrid Architecture
 
-1. **HTTP Server** (`app.py`): Receives HTTP POST requests from Bot Framework channels
-2. **Bot Framework Adapter**: Processes incoming activities and handles authentication
-3. **AI-Powered Bot Logic** (`bot.py`): Implements bot behavior with AI agent and voice capabilities
-4. **AI Agent Service** (`ai_agent_service.py`): Handles Azure AI Foundry integration for intelligent responses
-5. **Voice Service** (`voice_service.py`): Handles Azure Speech Service integration
-6. **Configuration** (`config.py`): Manages app settings, credentials, AI, and voice service configuration
+The KAMI bot uses a unified hybrid architecture that seamlessly integrates text and voice conversation:
+
+1. **Hybrid Interface** (`hybrid_bot.py`): Provides web-based interface supporting both text chat and voice live sessions
+2. **Voice Live Integration**: Real-time voice conversation using Azure Voice Live API with AI Foundry agent
+3. **Text Chat Integration**: Traditional text-based conversation using the same AI Foundry agent
+4. **Seamless Switching**: Users can switch between text and voice modes while maintaining conversation context
 
 ### Message Flow
 
-1. User sends a message (text or audio) through a channel (Bot Framework Emulator, Teams, etc.)
-2. Bot Framework service forwards the message to your bot's endpoint (`/api/messages`)
-3. The aiohttp server receives the HTTP request
-4. Bot Framework Adapter deserializes the activity and calls the bot's message handler
-5. AI-powered bot processes the message using Azure AI Foundry for intelligent responses
-6. If voice session is active, response can be converted to speech using Azure Speech Service
-7. Response is sent back through the same channel to the user
+#### Text Chat Flow
+1. User types message in web interface
+2. Message sent to hybrid bot server
+3. AI Agent Service processes message through Azure AI Foundry
+4. Intelligent response returned to web interface
+5. Response displayed in chat area
 
-### AI Processing Flow
+#### Voice Live Flow
+1. User speaks into microphone
+2. Voice captured by browser and sent to Voice Live service
+3. Azure Voice Live API processes speech in real-time
+4. Voice Live service forwards to Azure AI Foundry agent
+5. AI agent generates response
+6. Response synthesized to speech and played back
 
-1. **User Input**: Text or speech input from user
-2. **AI Agent Processing**: User message → Azure AI Foundry → Intelligent response
-3. **Conversation History**: Maintains context across conversation turns
-4. **Fallback Handling**: Graceful degradation when AI services are not configured
+### AI Processing
 
-### Voice Processing Flow
-
-1. **Speech-to-Text**: Audio input → Azure Speech Service → Recognized text
-2. **AI Processing**: Recognized text → AI Agent → Intelligent response text  
+Both text and voice modes use the same Azure AI Foundry agent:
+- **Agent ID**: Configured in environment variables
+- **Project Integration**: Connected to Azure AI Foundry project
+- **Context Preservation**: Conversation history maintained across modes
+- **Intelligent Responses**: Powered by Azure AI Foundry's advanced language models  
 3. **Text-to-Speech**: Response text → Azure Speech Service → Audio output
 4. **Voice Live Agent**: Manages real-time voice interactions and session state
 
@@ -458,132 +468,79 @@ The AI-powered bot implements the `ActivityHandler` class and overrides:
 
 #### Voice Service Components
 
-- **`VoiceService`**: Core Azure Speech Service integration for speech-to-text and text-to-speech
-- **`VoiceLiveAgent`**: Manages voice session state and real-time voice interactions
-- **Voice Commands**: `/voice`, `/voices`, `/help` for controlling voice functionality
+## Troubleshooting
 
-## Deployment
+### Common Issues
 
-### Local Development vs Production
+#### Voice Live not working / "Voice features are not available"
 
-- **Local Development**: No credentials needed, uses empty `MicrosoftAppId` and `MicrosoftAppPassword`
-- **Production**: Requires valid Azure Bot Service credentials
+**Common causes and solutions**:
+- **Missing Azure Voice Live configuration**: Set `AZURE_VOICE_LIVE_ENDPOINT` and `AZURE_VOICE_LIVE_KEY` environment variables
+- **Invalid Voice Live credentials**: Verify your Azure Voice Live API key and endpoint in the Azure portal
+- **AI Foundry agent not configured**: Ensure `AI_FOUNDRY_AGENT_ID` and `AI_FOUNDRY_PROJECT_NAME` are set correctly
+- **Azure authentication issues**: Verify `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are correct
 
-### Deploying to Azure
+#### "No module named" errors
 
-To deploy this bot to Azure Bot Service:
-
-1. **Create Azure resources**:
-   - Create an Azure Bot Service resource in the Azure portal
-   - Create an Azure App Service or Container Instance for hosting
-
-2. **Configure authentication**:
-   - Set the `MicrosoftAppId` environment variable with your bot's Application ID
-   - Set the `MicrosoftAppPassword` environment variable with your bot's client secret
-
-3. **Deploy the code**:
-   - Deploy to Azure App Service using Git, VS Code, or Azure CLI
-   - Or containerize and deploy to Azure Container Instances
-
-4. **Update Bot configuration**:
-   - In the Azure portal, update your bot's messaging endpoint to point to your deployed app
-   - Test the bot in the Web Chat or other configured channels
-
-### Environment Variables for Production
-
+**Solution**: Make sure you've installed the dependencies:
 ```bash
-# Required for Azure deployment
-MicrosoftAppId=your-bot-app-id
-MicrosoftAppPassword=your-bot-client-secret
-PORT=80  # or the port your hosting service expects
-
-# Required for AI features in production
-AZURE_AI_ENDPOINT=https://your-project.cognitiveservices.azure.com/
-AZURE_AI_API_KEY=your-azure-ai-api-key
-AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
-
-# Required for voice features in production
-AZURE_SPEECH_KEY=your-azure-speech-service-key  
-AZURE_SPEECH_REGION=your-azure-speech-region
-
-# Optional for advanced voice features
-AZURE_VOICE_LIVE_ENDPOINT=https://your-endpoint.cognitiveservices.azure.com/
-AZURE_VOICE_LIVE_KEY=your-voice-live-key
+pip install -r requirements.txt
 ```
 
-## Voice Live API Implementation
+#### Port 3978 is already in use
 
-This bot implements the Azure Speech Service Voice Live API following Microsoft's official documentation. Key features include:
+**Solution**: Either stop the existing process or change the port:
+```bash
+# Option 1: Kill existing process (Windows)
+netstat -ano | findstr :3978
+taskkill /PID <PID> /F
 
-### Speech-to-Text Capabilities
-- Real-time speech recognition using Azure Speech Service
-- Support for multiple languages (configured for en-US by default)
-- Error handling and fallback for recognition failures
+# Option 1: Kill existing process (macOS/Linux)
+lsof -ti:3978 | xargs kill -9
 
-### Text-to-Speech Capabilities  
-- Neural voice synthesis using Azure Speech Service
-- Multiple voice options (default: en-US-JennyNeural)
-- Audio output in WAV format for bot responses
+# Option 2: Use a different port
+export PORT=3979  # or set in .env file
+python start_all.py
+```
 
-### Voice Live Agent Features
-- Session management for voice interactions
-- Real-time processing of voice inputs
-- Integration with bot conversation flow
+#### Browser microphone permissions
 
-### Voice Commands
-- `/voice` - Start voice session for enhanced voice interactions
-- `/voices` - List available neural voices from Azure Speech Service  
-- `/help` - Display all available commands and voice status
+**Solution**: Grant microphone permissions when prompted by the browser for Voice Live functionality.
 
-### Setup Requirements for Voice Features
+#### Hybrid interface not loading
 
-1. **Azure Speech Service Resource**:
-   ```bash
-   # Create in Azure Portal or using Azure CLI
-   az cognitiveservices account create \
-     --name "your-speech-service" \
-     --resource-group "your-resource-group" \
-     --kind "SpeechServices" \
-     --sku "S0" \
-     --location "eastus"
-   ```
+**Common causes and solutions**:
+- **Bot not running**: Ensure the bot shows "Hybrid Bot is ready!" message
+- **Wrong URL**: Access `http://localhost:3978/hybrid` (note the `/hybrid` path)
+- **Browser cache**: Try refreshing the page or clearing browser cache
 
-2. **Environment Configuration**:
-   ```bash
-   export AZURE_SPEECH_KEY="your_key_here"
-   export AZURE_SPEECH_REGION="eastus"
-   ```
+### Getting Help
 
-3. **Install Dependencies**:
-   ```bash
-   pip install azure-ai-inference azure-identity azure-cognitiveservices-speech>=1.24.0
-   ```
+If you encounter issues not covered here:
 
-The implementation gracefully handles cases where AI or voice services are not configured, allowing the bot to provide fallback responses when services are unavailable.
+1. **Check the console output** for detailed error messages
+2. **Review the Azure AI Foundry documentation**: https://learn.microsoft.com/en-us/azure/ai-foundry/
+3. **Check the issues** in this repository
+4. **Create a new issue** with details about your problem and environment
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and add tests
-4. Run tests: `python test_bot.py`
+3. Make your changes
+4. Test the hybrid interface thoroughly
 5. Commit your changes: `git commit -am 'Add some feature'`
 6. Push to the branch: `git push origin feature-name`
 7. Submit a pull request
 
 ## License
 
-This project follows the Microsoft Bot Framework licensing terms. The Bot Framework SDK is licensed under the MIT License.
+This project follows the MIT License.
 
 ## Additional Resources
 
-- [Bot Framework Documentation](https://docs.microsoft.com/en-us/azure/bot-service/)
-- [Python Bot Framework SDK](https://github.com/Microsoft/botbuilder-python)
-- [Bot Framework Emulator](https://github.com/Microsoft/BotFramework-Emulator)
-- [Azure Bot Service](https://azure.microsoft.com/en-us/services/bot-service/)
-- [Bot Framework Samples](https://github.com/Microsoft/BotBuilder-Samples)
 - [Azure AI Foundry Documentation](https://learn.microsoft.com/en-us/azure/ai-foundry/)
-- [Azure AI Foundry Quickstart](https://learn.microsoft.com/en-us/azure/ai-foundry/quickstarts/get-started-code?tabs=python&pivots=fdp-project)
-- [Azure Speech Service Documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/)
-- [Voice Live Agents Quickstart](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live-agents-quickstart?tabs=windows%2Ckeyless&pivots=programming-language-python)
 - [Azure AI Foundry Portal](https://ai.azure.com/)
+- [Azure Voice Live API Documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live-agents-quickstart)
+- [Azure AI Services Documentation](https://learn.microsoft.com/en-us/azure/ai-services/)
+- [Azure Authentication Documentation](https://learn.microsoft.com/en-us/azure/developer/python/azure-sdk-authenticate)
