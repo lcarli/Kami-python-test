@@ -25,6 +25,11 @@ class DefaultConfig:
     # Voice Live API Configuration 
     VOICE_LIVE_ENDPOINT = os.environ.get("AZURE_VOICE_LIVE_ENDPOINT", "")
     VOICE_LIVE_KEY = os.environ.get("AZURE_VOICE_LIVE_KEY", "")
+    AZURE_VOICE_LIVE_ENDPOINT = os.environ.get("AZURE_VOICE_LIVE_ENDPOINT", "")
+    AZURE_VOICE_LIVE_API_KEY = os.environ.get("AZURE_VOICE_LIVE_API_KEY", "")
+    AZURE_VOICE_LIVE_API_VERSION = os.environ.get("AZURE_VOICE_LIVE_API_VERSION", "2025-05-01-preview")
+    AI_FOUNDRY_PROJECT_NAME = os.environ.get("AI_FOUNDRY_PROJECT_NAME", "")
+    AI_FOUNDRY_AGENT_ID = os.environ.get("AI_FOUNDRY_AGENT_ID", "")
     
     # Azure AI Services Configuration
     AI_PROJECT_CONNECTION_STRING = os.environ.get("AZURE_AI_PROJECT_CONNECTION_STRING", "")
