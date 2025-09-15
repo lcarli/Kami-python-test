@@ -5,3 +5,5 @@ aiohttp-cors>=0.7.0
 azure-cognitiveservices-speech>=1.24.0
 azure-ai-inference>=1.0.0b9
 azure-identity>=1.25.0
+openai>=1.0.0
+python-dotenv>=1.0.0
