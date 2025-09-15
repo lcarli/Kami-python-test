@@ -58,7 +58,7 @@ async def on_error(context: TurnContext, error: Exception):
             trace_activity = Activity(
                 label="TurnError",
                 name="on_turn_error Trace",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(datetime.UTC),
                 type=ActivityTypes.trace,
                 value=f"{error}",
                 value_type="https://www.botframework.com/schemas/error",
@@ -116,14 +116,14 @@ async def web_chat(req: Request) -> Response:
                 return json_response({
                     "type": "message",
                     "text": ai_response,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(datetime.UTC).isoformat(),
                     "from": {"id": "bot", "name": "Kami Bot"}
                 })
             else:
                 return json_response({
                     "type": "message", 
                     "text": "I'm sorry, I couldn't generate a response at the moment. Please try again.",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(datetime.UTC).isoformat(),
                     "from": {"id": "bot", "name": "Kami Bot"}
                 })
                 
@@ -132,7 +132,7 @@ async def web_chat(req: Request) -> Response:
             return json_response({
                 "type": "message",
                 "text": "I encountered an error while processing your message. Please try again.",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "from": {"id": "bot", "name": "Kami Bot"}
             })
             
