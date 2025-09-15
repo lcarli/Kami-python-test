@@ -1,10 +1,14 @@
-# Bot Framework Python Echo Bot
+# Voice-Enabled Echo Bot with Azure Speech Service
 
-This repository contains a simple Echo Bot built using the Microsoft Bot Framework SDK for Python, following the [official Microsoft quickstart guide](https://learn.microsoft.com/en-us/azure/bot-service/bot-service-quickstart-create-bot?view=azure-bot-service-4.0&tabs=python%2Cvs).
+This repository contains an enhanced Echo Bot built using the Microsoft Bot Framework SDK for Python with integrated Azure Speech Service capabilities, including Voice Live API functionality following the [official Microsoft quickstart guide](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live-agents-quickstart?tabs=windows%2Ckeyless&pivots=programming-language-python).
 
 ## Features
 
 - **Echo Bot**: Responds to user messages by echoing them back with "Echo: " prefix
+- **Voice Processing**: Speech-to-text and text-to-speech capabilities using Azure Speech Service
+- **Voice Live Agents**: Real-time voice interaction support
+- **Audio Message Support**: Can process audio attachments and respond with voice
+- **Multiple Voice Options**: Access to various neural voices from Azure
 - **Welcome Message**: Greets new users when they join the conversation
 - **Error Handling**: Comprehensive error handling with debugging support
 - **Bot Framework Integration**: Uses the official Microsoft Bot Framework SDK
@@ -17,6 +21,21 @@ Before setting up the bot locally, ensure you have:
 - **pip package manager** - Usually comes with Python, check with `pip --version`
 - **Git** - For cloning the repository
 - **Bot Framework Emulator** (optional) - For testing the bot locally
+- **Azure Speech Service** - For voice capabilities (see configuration section)
+
+### Azure Speech Service Setup
+
+To enable voice capabilities, you need an Azure Speech Service resource:
+
+1. **Create Azure Speech Service**:
+   - Go to the [Azure Portal](https://portal.azure.com/)
+   - Create a new "Speech Service" resource
+   - Note the **Key** and **Region** from the resource
+
+2. **Get AI Foundry Access** (Optional for advanced features):
+   - Visit [AI Foundry](https://ai.azure.com/)
+   - Create or access your AI hub
+   - Get endpoint and key information
 
 ### Verifying Prerequisites
 
@@ -61,27 +80,51 @@ pip install -r requirements.txt
 
 ## Configuration
 
-The bot uses environment variables for configuration. For local development, you typically don't need to set these.
+The bot uses environment variables for configuration. For local development, basic bot functionality works without additional configuration, but voice features require Azure Speech Service setup.
 
 ### Environment Variables
 
-| Variable | Description | Default | Required for Local |
+| Variable | Description | Default | Required for Voice |
 |----------|-------------|---------|-------------------|
 | `MicrosoftAppId` | Bot application ID from Azure | `""` (empty) | No |
 | `MicrosoftAppPassword` | Bot application password from Azure | `""` (empty) | No |
 | `PORT` | Server port | `3978` | No |
+| `AZURE_SPEECH_KEY` | Azure Speech Service subscription key | `""` (empty) | **Yes** |
+| `AZURE_SPEECH_REGION` | Azure Speech Service region | `""` (empty) | **Yes** |
+| `AZURE_VOICE_LIVE_ENDPOINT` | AI Foundry Voice Live endpoint (optional) | `""` (empty) | No |
+| `AZURE_VOICE_LIVE_KEY` | AI Foundry Voice Live key (optional) | `""` (empty) | No |
 
 ### Local Development Configuration
 
-For local testing, you can run the bot without setting any environment variables. The bot will use default settings defined in `config.py`.
+For basic echo bot testing, you can run without any environment variables. The bot will use default settings defined in `config.py`.
 
-If you need to customize settings, create a `.env` file (not tracked by git):
+#### Voice Features Configuration
+
+To enable voice capabilities, you **must** set the Azure Speech Service credentials:
 
 ```bash
-# .env file (optional for local development)
+# Required for voice features
+export AZURE_SPEECH_KEY="your_speech_service_key"
+export AZURE_SPEECH_REGION="your_speech_service_region"  # e.g., "eastus"
+```
+
+#### Complete .env File Example
+
+Create a `.env` file (not tracked by git) for local development:
+
+```bash
+# .env file - Basic bot configuration (optional)
 MicrosoftAppId=
 MicrosoftAppPassword=
 PORT=3978
+
+# Azure Speech Service (required for voice features)
+AZURE_SPEECH_KEY=your_speech_service_key_here
+AZURE_SPEECH_REGION=eastus
+
+# AI Foundry Voice Live (optional for advanced features)
+AZURE_VOICE_LIVE_ENDPOINT=https://your-endpoint.cognitiveservices.azure.com/
+AZURE_VOICE_LIVE_KEY=your_voice_live_key_here
 ```
 
 ## Running the Bot Locally
@@ -128,13 +171,38 @@ python test_bot.py
 python -m unittest test_bot.py -v
 ```
 
+### Testing Voice Features
+
+The enhanced bot includes several voice-related commands:
+
+1. **Basic Text Interaction**: Send any text message to get an echo response
+2. **Voice Commands**:
+   - `/voice` - Enable voice session for voice responses  
+   - `/voices` - List available neural voices
+   - `/help` - Show all available commands
+3. **Audio Messages**: Send audio attachments to test speech-to-text (when properly configured)
+
 ### Testing with Bot Framework Emulator
 
 1. **Download and install** the [Bot Framework Emulator](https://github.com/Microsoft/BotFramework-Emulator/releases)
 2. **Start the bot** using one of the methods above
 3. **Open Bot Framework Emulator**
 4. **Connect to** `http://localhost:3978/api/messages`
-5. **Start chatting** with your bot!
+5. **Test basic functionality**: Send text messages
+6. **Test voice commands**: Try `/voice`, `/voices`, and `/help` commands
+7. **Monitor console output** for voice service status messages
+
+### Testing Voice Features with Real Audio
+
+To test audio processing (requires Azure Speech Service configuration):
+
+1. **Configure speech service** as described in the Configuration section
+2. **Start the bot** with voice features enabled
+3. **Send `/voice` command** to enable voice session
+4. **Use audio recording tools** or Bot Framework Emulator's microphone feature
+5. **Send audio messages** to test speech-to-text functionality
+
+Note: Full audio testing requires proper audio codec support and may work better with deployed bots rather than local emulator testing.
 
 ### Testing with ngrok (for external testing)
 
@@ -156,9 +224,24 @@ If you need to test the bot from external sources or webhooks:
 
 ### Debugging
 
-- **Console Output**: The bot logs information to the console, including errors
+- **Console Output**: The bot logs information to the console, including errors and voice service status
 - **Bot Framework Emulator**: Shows detailed conversation flow and errors
 - **Error Handling**: The bot includes comprehensive error handling that sends error messages back to the user
+- **Voice Service Logging**: Azure Speech Service operations are logged for debugging
+
+#### Common Voice-Related Debug Messages
+
+```bash
+# Voice features working correctly
+INFO: Bot initialized with voice capabilities enabled
+INFO: Azure Speech Service initialized successfully
+INFO: Voice live session started
+
+# Voice features disabled (missing configuration)
+WARNING: Bot initialized with voice capabilities disabled
+WARNING: Azure Speech SDK not available. Voice features will be disabled.
+WARNING: Speech-to-text not available: service not configured
+```
 
 ### Common Development Tasks
 
@@ -179,6 +262,25 @@ mypy *.py
 ## Troubleshooting
 
 ### Common Issues
+
+#### ModuleNotFoundError: No module named 'azure.cognitiveservices.speech'
+
+**Solution**: Install the Azure Speech Service SDK:
+```bash
+pip install azure-cognitiveservices-speech
+```
+
+#### Voice features not working / "Voice features are not available"
+
+**Common causes and solutions**:
+- **Missing Azure Speech Service configuration**: Set `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` environment variables
+- **Invalid speech service credentials**: Verify your Azure Speech Service key and region in the Azure portal
+- **Speech SDK not installed**: Run `pip install azure-cognitiveservices-speech`
+- **Region mismatch**: Ensure the region matches your Azure Speech Service resource (e.g., "eastus", "westus2")
+
+#### Speech-to-text not working with audio attachments
+
+**Solution**: This requires additional implementation to download and process audio attachments. The current implementation shows placeholder functionality.
 
 #### ModuleNotFoundError: No module named 'botbuilder'
 
@@ -232,11 +334,12 @@ If you encounter issues not covered here:
 
 ```
 ├── app.py              # Main application entry point and web server setup
-├── bot.py              # EchoBot class implementation with message handling
+├── bot.py              # Enhanced EchoBot class with voice capabilities  
+├── voice_service.py    # Azure Speech Service integration and Voice Live Agent
 ├── config.py           # Configuration settings and environment variables
 ├── start_bot.py        # Alternative startup script with user-friendly output
 ├── test_bot.py         # Unit tests for bot functionality
-├── requirements.txt    # Python dependencies
+├── requirements.txt    # Python dependencies including Azure Speech Service
 ├── .gitignore         # Git ignore file
 └── README.md          # This documentation file
 ```
@@ -244,34 +347,49 @@ If you encounter issues not covered here:
 ### File Descriptions
 
 - **`app.py`**: Sets up the aiohttp web server, Bot Framework adapter, and handles incoming HTTP requests
-- **`bot.py`**: Contains the `EchoBot` class that inherits from `ActivityHandler` and implements message processing logic
-- **`config.py`**: Manages configuration settings using environment variables with sensible defaults
+- **`bot.py`**: Contains the enhanced `EchoBot` class with voice capabilities, supporting both text and voice interactions
+- **`voice_service.py`**: Implements Azure Speech Service integration including speech-to-text, text-to-speech, and Voice Live Agent functionality
+- **`config.py`**: Manages configuration settings using environment variables with Azure Speech Service settings
 - **`start_bot.py`**: Alternative entry point that provides more user-friendly startup messages
 - **`test_bot.py`**: Unit tests using Python's `unittest` framework to validate bot functionality
 
 ## How It Works
 
-### Bot Framework Architecture
+### Enhanced Bot Framework Architecture
 
 1. **HTTP Server** (`app.py`): Receives HTTP POST requests from Bot Framework channels
 2. **Bot Framework Adapter**: Processes incoming activities and handles authentication
-3. **Bot Logic** (`bot.py`): Implements the actual bot behavior and responses
-4. **Configuration** (`config.py`): Manages app settings and credentials
+3. **Enhanced Bot Logic** (`bot.py`): Implements bot behavior with voice capabilities
+4. **Voice Service** (`voice_service.py`): Handles Azure Speech Service integration
+5. **Configuration** (`config.py`): Manages app settings, credentials, and voice service configuration
 
 ### Message Flow
 
-1. User sends a message through a channel (Bot Framework Emulator, Teams, etc.)
+1. User sends a message (text or audio) through a channel (Bot Framework Emulator, Teams, etc.)
 2. Bot Framework service forwards the message to your bot's endpoint (`/api/messages`)
 3. The aiohttp server receives the HTTP request
 4. Bot Framework Adapter deserializes the activity and calls the bot's message handler
-5. EchoBot processes the message and sends a response
+5. Enhanced EchoBot processes the message, potentially using voice services for audio content
 6. Response is sent back through the same channel to the user
+
+### Voice Processing Flow
+
+1. **Speech-to-Text**: Audio input → Azure Speech Service → Recognized text
+2. **Bot Processing**: Recognized text → Bot logic → Response text  
+3. **Text-to-Speech**: Response text → Azure Speech Service → Audio output
+4. **Voice Live Agent**: Manages real-time voice interactions and session state
 
 ### Key Components
 
-The bot implements the `ActivityHandler` class and overrides:
-- **`on_message_activity`**: Handles incoming text messages and returns echo responses
-- **`on_members_added_activity`**: Welcomes new users when they join the conversation
+The enhanced bot implements the `ActivityHandler` class and overrides:
+- **`on_message_activity`**: Handles incoming text messages, voice commands, and audio attachments
+- **`on_members_added_activity`**: Welcomes new users and explains voice capabilities
+
+#### Voice Service Components
+
+- **`VoiceService`**: Core Azure Speech Service integration for speech-to-text and text-to-speech
+- **`VoiceLiveAgent`**: Manages voice session state and real-time voice interactions
+- **Voice Commands**: `/voice`, `/voices`, `/help` for controlling voice functionality
 
 ## Deployment
 
@@ -307,7 +425,65 @@ To deploy this bot to Azure Bot Service:
 MicrosoftAppId=your-bot-app-id
 MicrosoftAppPassword=your-bot-client-secret
 PORT=80  # or the port your hosting service expects
+
+# Required for voice features in production
+AZURE_SPEECH_KEY=your-azure-speech-service-key  
+AZURE_SPEECH_REGION=your-azure-speech-region
+
+# Optional for advanced voice features
+AZURE_VOICE_LIVE_ENDPOINT=https://your-endpoint.cognitiveservices.azure.com/
+AZURE_VOICE_LIVE_KEY=your-voice-live-key
 ```
+
+## Voice Live API Implementation
+
+This bot implements the Azure Speech Service Voice Live API following Microsoft's official documentation. Key features include:
+
+### Speech-to-Text Capabilities
+- Real-time speech recognition using Azure Speech Service
+- Support for multiple languages (configured for en-US by default)
+- Error handling and fallback for recognition failures
+
+### Text-to-Speech Capabilities  
+- Neural voice synthesis using Azure Speech Service
+- Multiple voice options (default: en-US-JennyNeural)
+- Audio output in WAV format for bot responses
+
+### Voice Live Agent Features
+- Session management for voice interactions
+- Real-time processing of voice inputs
+- Integration with bot conversation flow
+
+### Voice Commands
+- `/voice` - Start voice session for enhanced voice interactions
+- `/voices` - List available neural voices from Azure Speech Service  
+- `/help` - Display all available commands and voice status
+
+### Setup Requirements for Voice Features
+
+1. **Azure Speech Service Resource**:
+   ```bash
+   # Create in Azure Portal or using Azure CLI
+   az cognitiveservices account create \
+     --name "your-speech-service" \
+     --resource-group "your-resource-group" \
+     --kind "SpeechServices" \
+     --sku "S0" \
+     --location "eastus"
+   ```
+
+2. **Environment Configuration**:
+   ```bash
+   export AZURE_SPEECH_KEY="your_key_here"
+   export AZURE_SPEECH_REGION="eastus"
+   ```
+
+3. **Install Dependencies**:
+   ```bash
+   pip install azure-cognitiveservices-speech>=1.24.0
+   ```
+
+The implementation gracefully handles cases where voice services are not configured, allowing the bot to function as a regular echo bot when speech services are unavailable.
 
 ## Contributing
 
@@ -330,3 +506,6 @@ This project follows the Microsoft Bot Framework licensing terms. The Bot Framew
 - [Bot Framework Emulator](https://github.com/Microsoft/BotFramework-Emulator)
 - [Azure Bot Service](https://azure.microsoft.com/en-us/services/bot-service/)
 - [Bot Framework Samples](https://github.com/Microsoft/BotBuilder-Samples)
+- [Azure Speech Service Documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/)
+- [Voice Live Agents Quickstart](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/voice-live-agents-quickstart?tabs=windows%2Ckeyless&pivots=programming-language-python)
+- [Azure AI Foundry](https://ai.azure.com/)
