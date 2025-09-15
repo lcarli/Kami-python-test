@@ -61,7 +61,10 @@ class EchoBot(ActivityHandler):
                     welcome_message += "\n\n🔇 Voice features are currently disabled. Please configure Azure Speech Service to enable them."
                 
                 welcome_message += "\n\nType '/help' for more information!"
-                await turn_context.send_activity(welcome_message)
+                # Use safe send activity to handle web client connections
+                success = await self._safe_send_activity(turn_context, welcome_message)
+                if not success:
+                    logging.info("Welcome message generated but couldn't send via Bot Framework - likely web client")
 
     async def on_message_activity(self, turn_context: TurnContext):
         """Handle both text and voice messages with AI agent responses."""
@@ -89,7 +92,8 @@ class EchoBot(ActivityHandler):
     async def _handle_audio_message(self, turn_context: TurnContext, attachment) -> None:
         """Handle incoming audio messages with AI agent responses."""
         if not self.voice_service.is_available():
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Voice features are not available. Please configure Azure Speech Service."
             )
             return
@@ -97,7 +101,8 @@ class EchoBot(ActivityHandler):
         try:
             # In a real implementation, you would download the audio attachment
             # and process it with speech-to-text, then use AI agent for response
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "🎤 I received an audio message! Voice processing is configured and would:"
                 "\n1. Convert your speech to text using Azure Speech Service"
                 "\n2. Generate an intelligent response using AI agent"
@@ -107,14 +112,16 @@ class EchoBot(ActivityHandler):
             
         except Exception as e:
             logging.error(f"Error processing audio message: {e}")
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Sorry, I encountered an error while processing your audio message."
             )
 
     async def _handle_voice_command(self, turn_context: TurnContext) -> None:
         """Handle the /voice command to enable voice responses."""
         if not self.voice_service.is_available():
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Voice features are not available. Please configure Azure Speech Service with:"
                 "\n- AZURE_SPEECH_KEY environment variable"
                 "\n- AZURE_SPEECH_REGION environment variable"
@@ -123,21 +130,24 @@ class EchoBot(ActivityHandler):
         
         try:
             await self.voice_agent.start_voice_session()
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Voice session started! I can now process voice inputs and provide voice responses. "
                 "Send me text and I'll respond with voice when possible."
             )
             
         except Exception as e:
             logging.error(f"Error starting voice session: {e}")
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Sorry, I couldn't start the voice session. Please check the Azure Speech Service configuration."
             )
 
     async def _handle_voices_command(self, turn_context: TurnContext) -> None:
         """Handle the /voices command to show available voices."""
         if not self.voice_service.is_available():
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Voice features are not available. Please configure Azure Speech Service."
             )
             return
@@ -154,13 +164,14 @@ class EchoBot(ActivityHandler):
                 if len(voices) > 5:
                     voice_list += f"\n... and {len(voices) - 5} more voices available."
                 
-                await turn_context.send_activity(voice_list)
+                await self._safe_send_activity(turn_context, voice_list)
             else:
-                await turn_context.send_activity("No voices are currently available.")
+                await self._safe_send_activity(turn_context, "No voices are currently available.")
                 
         except Exception as e:
             logging.error(f"Error getting voices: {e}")
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "Sorry, I couldn't retrieve the available voices."
             )
 
@@ -183,7 +194,7 @@ class EchoBot(ActivityHandler):
         else:
             help_text += "\n🔇 Voice features are disabled. Configure Azure Speech Service to enable them."
         
-        await turn_context.send_activity(help_text)
+        await self._safe_send_activity(turn_context, help_text)
 
     async def _safe_send_activity(self, turn_context: TurnContext, message: str) -> bool:
         """Safely send an activity, handling service_url issues."""

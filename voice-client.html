@@ -317,6 +317,7 @@
         class KamiBotClient {
             constructor() {
                 this.botEndpoint = 'http://localhost:3978/api/messages';
+                this.webChatEndpoint = 'http://localhost:3978/api/webchat';
                 this.userId = 'webclient-' + Math.random().toString(36).substr(2, 9);
                 this.conversationId = 'conversation-' + Math.random().toString(36).substr(2, 9);
                 this.activityId = 1;
@@ -404,7 +405,7 @@
 
             async testConnection() {
                 try {
-                    const response = await fetch(this.botEndpoint, {
+                    const response = await fetch(this.webChatEndpoint, {
                         method: 'OPTIONS'
                     });
                     
@@ -419,17 +420,8 @@
             }
 
             async sendInitialMessage() {
-                // Send a conversation update to initialize the bot
-                try {
-                    await this.sendActivityToBot({
-                        type: 'conversationUpdate',
-                        membersAdded: [{ id: this.userId, name: 'User' }],
-                        from: { id: this.userId, name: 'User' },
-                        recipient: { id: 'bot', name: 'Bot' }
-                    });
-                } catch (error) {
-                    console.log('Could not send initial message:', error);
-                }
+                // No need to send initial message with direct web chat endpoint
+                console.log('Direct web chat endpoint - no initial message needed');
             }
 
             toggleVoiceRecording() {
@@ -460,73 +452,39 @@
                 this.showTyping(true);
 
                 try {
-                    const activity = {
-                        type: 'message',
-                        from: { id: this.userId, name: 'User' },
-                        recipient: { id: 'bot', name: 'Bot' },
-                        text: message,
-                        timestamp: new Date().toISOString(),
-                        id: (this.activityId++).toString(),
-                        conversation: { id: this.conversationId }
-                    };
+                    // Send message directly to the web chat endpoint
+                    const response = await fetch(this.webChatEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: message,
+                            from: { id: this.userId, name: 'User' },
+                            timestamp: new Date().toISOString()
+                        })
+                    });
 
-                    await this.sendActivityToBot(activity);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const botResponse = await response.json();
                     
-                    // Simulate bot response (since we can't easily get the actual response)
-                    setTimeout(() => {
-                        this.showTyping(false);
-                        this.simulateBotResponse(message);
-                    }, 1000);
+                    this.showTyping(false);
+                    
+                    if (botResponse.text) {
+                        this.addMessage(botResponse.text, 'bot');
+                        this.speakText(botResponse.text);
+                    } else {
+                        this.addMessage('Sorry, I could not process your message. Please try again.', 'bot');
+                    }
 
                 } catch (error) {
                     this.showTyping(false);
-                    this.addMessage('Connection error with bot. Check if service is running.', 'bot');
+                    this.addMessage('Bot connection error. Check if the service is running.', 'bot');
                     this.showMessage(`Error: ${error.message}`, 'error');
                 }
-            }
-
-            async sendActivityToBot(activity) {
-                // Add required Bot Framework fields
-                activity.serviceUrl = this.botEndpoint.replace('/api/messages', '');
-                activity.channelId = 'webchat';
-                activity.locale = 'en-US';
-                
-                const response = await fetch(this.botEndpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(activity)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                return response;
-            }
-
-            simulateBotResponse(userMessage) {
-                // Simulate different types of responses based on user input
-                let botResponse = '';
-                const message = userMessage.toLowerCase();
-
-                if (message.includes('hello') || message.includes('hi')) {
-                    botResponse = 'Hello! How can I help you today? I am Kami Bot, an AI assistant with voice capabilities.';
-                } else if (message.includes('voice') || message.includes('speak') || message.includes('voz') || message.includes('falar')) {
-                    botResponse = 'Yes! You can use voice commands by clicking the microphone button 🎤. I can also respond with voice!';
-                } else if (message.includes('kami')) {
-                    botResponse = 'KAMI stands for Azure Cloud Solution Architect Agent. I specialize in Azure architecture and can help with cloud solutions!';
-                } else if (message.includes('azure')) {
-                    botResponse = 'I am an Azure expert! I can help with Enterprise-Scale Analytics Framework (ESAF), RBAC, Entra ID, and much more.';
-                } else if (message.includes('help') || message.includes('ajuda')) {
-                    botResponse = 'I can help you with:\n• Azure questions\n• Voice conversations\n• Text analysis\n• Solution architecture\n\nWhat would you like to know?';
-                } else {
-                    botResponse = `I understood your message: "${userMessage}". As an AI assistant, I am processing your request and will provide a response based on my knowledge.`;
-                }
-
-                this.addMessage(botResponse, 'bot');
-                this.speakText(botResponse);
             }
 
             addMessage(text, sender) {

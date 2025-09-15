@@ -92,6 +92,55 @@ async def messages(req: Request) -> Response:
     return Response(status=201)
 
 
+# Custom endpoint for web client that bypasses Bot Framework limitations
+async def web_chat(req: Request) -> Response:
+    """Handle direct messages from web client without Bot Framework constraints."""
+    try:
+        if "application/json" not in req.headers.get("Content-Type", ""):
+            return Response(status=415)
+
+        body = await req.json()
+        user_message = body.get("text", "").strip()
+        
+        if not user_message:
+            return json_response({"error": "No message provided"}, status=400)
+        
+        # Get AI response directly using the bot's AI service
+        try:
+            if BOT.ai_agent_service.is_available():
+                ai_response = await BOT.ai_agent_service.get_response(user_message)
+            else:
+                ai_response = await BOT.ai_agent_service.get_fallback_response(user_message)
+            
+            if ai_response:
+                return json_response({
+                    "type": "message",
+                    "text": ai_response,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "from": {"id": "bot", "name": "Kami Bot"}
+                })
+            else:
+                return json_response({
+                    "type": "message", 
+                    "text": "I'm sorry, I couldn't generate a response at the moment. Please try again.",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "from": {"id": "bot", "name": "Kami Bot"}
+                })
+                
+        except Exception as e:
+            print(f"Error in web chat AI processing: {e}")
+            return json_response({
+                "type": "message",
+                "text": "I encountered an error while processing your message. Please try again.",
+                "timestamp": datetime.utcnow().isoformat(),
+                "from": {"id": "bot", "name": "Kami Bot"}
+            })
+            
+    except Exception as e:
+        print(f"Error in web chat endpoint: {e}")
+        return json_response({"error": "Internal server error"}, status=500)
+
+
 def init_func(argv):
     APP = web.Application(middlewares=[aiohttp_error_middleware])
     
@@ -107,9 +156,11 @@ def init_func(argv):
     
     # Add routes
     messages_route = APP.router.add_post("/api/messages", messages)
+    web_chat_route = APP.router.add_post("/api/webchat", web_chat)
     
-    # Add CORS to the messages route
+    # Add CORS to the routes
     cors.add(messages_route)
+    cors.add(web_chat_route)
     
     return APP
 
