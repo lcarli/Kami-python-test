@@ -21,3 +21,9 @@ class DefaultConfig:
     # Voice Live API Configuration 
     VOICE_LIVE_ENDPOINT = os.environ.get("AZURE_VOICE_LIVE_ENDPOINT", "")
     VOICE_LIVE_KEY = os.environ.get("AZURE_VOICE_LIVE_KEY", "")
+    
+    # Azure AI Foundry Configuration
+    AI_PROJECT_CONNECTION_STRING = os.environ.get("AZURE_AI_PROJECT_CONNECTION_STRING", "")
+    AI_MODEL_DEPLOYMENT_NAME = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
+    AI_ENDPOINT = os.environ.get("AZURE_AI_ENDPOINT", "")
+    AI_API_KEY = os.environ.get("AZURE_AI_API_KEY", "")
