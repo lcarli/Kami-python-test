@@ -1,53 +1,70 @@
-# AI-Powered Voice Bot with Azure AI Foundry and Speech Service
+# KAMI Bot - AI-Powered Voice Bot with Azure Services
 
-This repository contains an AI-powered bot built using the Microsoft Bot Framework SDK for Python with integrated Azure AI Foundry and Azure Speech Service capabilities, following the [official Microsoft quickstart guide](https://learn.microsoft.com/en-us/azure/ai-foundry/quickstarts/get-started-code?tabs=python&pivots=fdp-project).
+KAMI (Knowledge and Azure Multilingual Intelligence) is an AI-powered conversational bot built with Microsoft Bot Framework and Azure AI Services. It features advanced voice capabilities, real-time chat, and intelligent responses powered by GPT-4o.
 
-## Features
+## ✨ Features
 
-- **AI Agent**: Provides intelligent responses using Azure AI Foundry instead of simple echoing
-- **Voice Processing**: Speech-to-text and text-to-speech capabilities using Azure Speech Service
-- **Voice Live Agents**: Real-time voice interaction support with AI responses
-- **Audio Message Support**: Can process audio attachments and respond with voice
-- **Multiple Voice Options**: Access to various neural voices from Azure
-- **Conversation History**: Maintains context across conversation turns
-- **Welcome Message**: Greets new users and explains AI and voice capabilities
-- **Error Handling**: Comprehensive error handling with debugging support
-- **Fallback Responses**: Graceful degradation when AI services are not configured
-- **Bot Framework Integration**: Uses the official Microsoft Bot Framework SDK
+- **🧠 Intelligent AI**: GPT-4o powered responses using Azure AI Services
+- **🎤 Voice Input**: Speech-to-text recognition with multilingual support
+- **🔊 Voice Output**: Natural text-to-speech synthesis
+- **💬 Real-time Chat**: Interactive web interface with modern UI
+- **🌐 Web Client**: Full-featured browser-based interface
+- **🔄 Dual SDK Support**: Automatic detection between Azure AI Services and AI Foundry
+- **📱 Cross-platform**: Runs on Windows, macOS, and Linux
+- **🛡️ Secure**: Environment-based credential management
+- **⚡ Easy Setup**: One-command launch scripts
 
-## Prerequisites
+## 🚀 Quick Start
 
-Before setting up the bot locally, ensure you have:
+### 1. Clone and Setup
+```bash
+git clone <repository-url>
+cd Kami-python-test
+pip install -r requirements.txt
+```
 
-- **Python 3.6 or higher** - Check with `python --version` or `python3 --version`
-- **pip package manager** - Usually comes with Python, check with `pip --version`
-- **Git** - For cloning the repository
-- **Bot Framework Emulator** (optional) - For testing the bot locally
-- **Azure AI Foundry Setup** - For intelligent AI responses (see configuration section)
-- **Azure Speech Service** - For voice capabilities (see configuration section)
+### 2. Configure Environment
+Create a `.env` file with your Azure credentials:
+```env
+AZURE_SPEECH_KEY=your_speech_service_key
+AZURE_SPEECH_REGION=your_region
+AZURE_AI_API_KEY=your_ai_service_key
+AZURE_AI_ENDPOINT=https://your-ai-service.cognitiveservices.azure.com/
+```
 
-### Azure AI Foundry Setup
+### 3. Launch Everything
+```bash
+# Python launcher (recommended)
+python start_all.py
 
-To enable intelligent AI responses, you need an Azure AI Foundry resource:
+# Or PowerShell
+./start_all.ps1
 
-1. **Create Azure AI Hub and Project**:
-   - Go to [Azure AI Foundry](https://ai.azure.com/)
-   - Create a new AI hub or use an existing one
-   - Create a project within the hub
-   - Deploy a chat model (e.g., gpt-4o-mini)
+# Or Batch file
+start_all.bat
+```
 
-2. **Get Connection Information**:
-   - Note the **Endpoint URL** from your AI project
-   - Get the **API Key** from the project settings
-   - Note the **Model Deployment Name** you want to use
+### 4. Start Chatting
+- Open your browser to: `http://localhost:8080/voice-client.html`
+- Click the microphone 🎤 to use voice
+- Type messages in the chat field
+- Enjoy AI-powered conversations!
 
-### Azure Speech Service Setup
+## 📋 Prerequisites
 
-To enable voice capabilities, you need an Azure Speech Service resource:
+- **Python 3.8+** - `python --version`
+- **pip** - Package manager
+- **Azure Speech Service** - For voice capabilities
+- **Azure AI Services** - For GPT-4o responses
+- **Modern web browser** - Chrome/Edge recommended for voice features
 
-1. **Create Azure Speech Service**:
-   - Go to the [Azure Portal](https://portal.azure.com/)
-   - Create a new "Speech Service" resource
+## ⚙️ Azure Setup
+
+### Azure AI Services (Required for AI responses)
+1. Create an **Azure AI Services** resource in Azure Portal
+2. Deploy a **GPT-4o** model
+3. Copy the **API Key** and **Endpoint URL**
+4. Add to your `.env` file
    - Note the **Key** and **Region** from the resource
 
 2. **Get AI Foundry Access** (Optional for advanced features):

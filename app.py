@@ -9,6 +9,7 @@ from datetime import datetime
 
 from aiohttp import web
 from aiohttp.web import Request, Response, json_response
+from aiohttp_cors import setup as setup_cors, ResourceOptions
 from botbuilder.core import (
     BotFrameworkAdapter,
     BotFrameworkAdapterSettings,
@@ -38,24 +39,34 @@ async def on_error(context: TurnContext, error: Exception):
     print(f"\n [on_turn_error] unhandled error: {error}", file=sys.stderr)
     traceback.print_exc()
 
-    # Send a message to the user
-    await context.send_activity("The bot encountered an error or bug.")
-    await context.send_activity(
-        "To continue to run this bot, please fix the bot source code."
-    )
+    # Try to send a message to the user, but handle service_url issues
+    try:
+        if context.activity.service_url:
+            await context.send_activity("The bot encountered an error or bug.")
+            await context.send_activity(
+                "To continue to run this bot, please fix the bot source code."
+            )
+        else:
+            print("Cannot send error message - service_url is None (likely web client)")
+    except Exception as send_error:
+        print(f"Could not send error message: {send_error}")
+    
     # Send a trace activity if we're talking to the Bot Framework Emulator
     if context.activity.channel_id == "emulator":
-        # Create a trace activity that contains the error object
-        trace_activity = Activity(
-            label="TurnError",
-            name="on_turn_error Trace",
-            timestamp=datetime.utcnow(),
-            type=ActivityTypes.trace,
-            value=f"{error}",
-            value_type="https://www.botframework.com/schemas/error",
-        )
-        # Send a trace activity, which will be displayed in Bot Framework Emulator
-        await context.send_activity(trace_activity)
+        try:
+            # Create a trace activity that contains the error object
+            trace_activity = Activity(
+                label="TurnError",
+                name="on_turn_error Trace",
+                timestamp=datetime.utcnow(),
+                type=ActivityTypes.trace,
+                value=f"{error}",
+                value_type="https://www.botframework.com/schemas/error",
+            )
+            # Send a trace activity, which will be displayed in Bot Framework Emulator
+            await context.send_activity(trace_activity)
+        except Exception as trace_error:
+            print(f"Could not send trace activity: {trace_error}")
 
 
 ADAPTER.on_turn_error = on_error
@@ -83,7 +94,23 @@ async def messages(req: Request) -> Response:
 
 def init_func(argv):
     APP = web.Application(middlewares=[aiohttp_error_middleware])
-    APP.router.add_post("/api/messages", messages)
+    
+    # Setup CORS for web client access
+    cors = setup_cors(APP, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            allow_methods="*"
+        )
+    })
+    
+    # Add routes
+    messages_route = APP.router.add_post("/api/messages", messages)
+    
+    # Add CORS to the messages route
+    cors.add(messages_route)
+    
     return APP
 
 

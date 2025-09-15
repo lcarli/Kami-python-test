@@ -185,6 +185,20 @@ class EchoBot(ActivityHandler):
         
         await turn_context.send_activity(help_text)
 
+    async def _safe_send_activity(self, turn_context: TurnContext, message: str) -> bool:
+        """Safely send an activity, handling service_url issues."""
+        try:
+            # Check if we have a valid service URL
+            if not turn_context.activity.service_url:
+                logging.warning("service_url is None, cannot send response via Bot Framework")
+                return False
+            
+            await turn_context.send_activity(message)
+            return True
+        except Exception as e:
+            logging.error(f"Error sending activity: {e}")
+            return False
+
     async def _handle_ai_response(self, turn_context: TurnContext, user_text: str) -> None:
         """Handle user messages with AI agent responses."""
         try:
@@ -213,20 +227,26 @@ class EchoBot(ActivityHandler):
                     if voice_audio:
                         # In a real implementation, you would send the audio back to the user
                         # For now, we'll just send the text with a note about voice
-                        await turn_context.send_activity(
+                        success = await self._safe_send_activity(
+                            turn_context,
                             f"🔊 {ai_response}\n\n(Voice response generated but audio delivery requires additional implementation)"
                         )
                     else:
-                        await turn_context.send_activity(ai_response)
+                        success = await self._safe_send_activity(turn_context, ai_response)
                 else:
-                    await turn_context.send_activity(ai_response)
+                    success = await self._safe_send_activity(turn_context, ai_response)
+                
+                if not success:
+                    logging.info("Response generated but couldn't send via Bot Framework - likely web client")
             else:
-                await turn_context.send_activity(
+                await self._safe_send_activity(
+                    turn_context,
                     "I'm sorry, I couldn't generate a response at the moment. Please try again."
                 )
                 
         except Exception as e:
             logging.error(f"Error handling AI response: {e}")
-            await turn_context.send_activity(
+            await self._safe_send_activity(
+                turn_context,
                 "I encountered an error while processing your message. Please try again."
             )
