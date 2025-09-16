@@ -204,21 +204,30 @@ class AudioPlayerAsync:
 class VoiceLiveService:
     """Voice Live service manager"""
     
-    def __init__(self, callback_handler=None):
+    def __init__(self, config=None, callback_handler=None, conversation_history=None):
         self.callback_handler = callback_handler
+        self.conversation_history = conversation_history
         self.client = None
         self.connection = None
         self.audio_player = None
         self.threads = []
         self.running = False
         
-        # Load configuration
-        load_dotenv("./.env", override=True)
-        self.endpoint = os.environ.get("AZURE_VOICE_LIVE_ENDPOINT")
-        self.agent_id = os.environ.get("AI_FOUNDRY_AGENT_ID")
-        self.project_name = os.environ.get("AI_FOUNDRY_PROJECT_NAME")
-        self.api_version = os.environ.get("AZURE_VOICE_LIVE_API_VERSION", "2025-05-01-preview")
-        self.api_key = os.environ.get("AZURE_VOICE_LIVE_API_KEY")
+        # Use provided config or load from environment
+        if config:
+            self.endpoint = config.AI_FOUNDRY_ENDPOINT
+            self.agent_id = config.AI_FOUNDRY_AGENT_ID
+            self.project_name = config.AI_FOUNDRY_PROJECT_NAME
+            self.api_version = config.AI_FOUNDRY_API_VERSION
+            self.api_key = config.AI_FOUNDRY_API_KEY
+        else:
+            # Load configuration from environment (fallback)
+            load_dotenv("./.env", override=True)
+            self.endpoint = os.environ.get("AI_FOUNDRY_ENDPOINT")
+            self.agent_id = os.environ.get("AI_FOUNDRY_AGENT_ID")
+            self.project_name = os.environ.get("AI_FOUNDRY_PROJECT_NAME")
+            self.api_version = os.environ.get("AI_FOUNDRY_API_VERSION", "2025-05-01-preview")
+            self.api_key = os.environ.get("AI_FOUNDRY_API_KEY")
 
     def start_session(self):
         """Start a Voice Live session"""

@@ -21,6 +21,7 @@ import aiohttp_cors
 from bot import EchoBot
 from config import DefaultConfig
 from voice_live_service import VoiceLiveService
+from ai_agent_service import ConversationHistory
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,9 @@ class HybridBot:
         self.bot = EchoBot()
         self.voice_live_service = None
         self.current_voice_connection = None
+        
+        # Shared conversation history for both text and voice
+        self.shared_conversation_history = ConversationHistory()
         
         # Web app for serving hybrid interface
         self.app = Application()
@@ -53,12 +57,15 @@ class HybridBot:
         """Initialize Voice Live service if credentials are available"""
         try:
             if all([
-                self.config.AZURE_VOICE_LIVE_ENDPOINT,
-                self.config.AZURE_VOICE_LIVE_API_KEY,
+                self.config.AI_FOUNDRY_ENDPOINT,
+                self.config.AI_FOUNDRY_API_KEY,
                 self.config.AI_FOUNDRY_PROJECT_NAME,
                 self.config.AI_FOUNDRY_AGENT_ID
             ]):
-                self.voice_live_service = VoiceLiveService(self.config)
+                self.voice_live_service = VoiceLiveService(
+                    self.config, 
+                    conversation_history=self.shared_conversation_history
+                )
                 logger.info("Voice Live service initialized successfully")
             else:
                 logger.warning("Voice Live service not available - missing configuration")
@@ -236,21 +243,108 @@ class HybridBot:
             }, status=500)
 
     async def process_text_message(self, message: str) -> str:
-        """Process text message through the bot"""
+        """Process text message through the same agent used by Voice Live"""
         try:
-            # Use the bot's AI service to generate response
+            # If Voice Live is available, use the same agent configuration
+            if (self.voice_live_service and 
+                self.config.AI_FOUNDRY_PROJECT_NAME and 
+                self.config.AI_FOUNDRY_AGENT_ID):
+                
+                # Use Azure AI Projects SDK (same as Voice Live)
+                from azure.ai.projects import AIProjectClient
+                from azure.identity import DefaultAzureCredential
+                
+                try:
+                    # Create client using same configuration as Voice Live
+                    credential = DefaultAzureCredential()
+                    
+                    # Try to construct the endpoint dynamically or use configured endpoint
+                    if self.config.AI_FOUNDRY_ENDPOINT:
+                        endpoint = f"{self.config.AI_FOUNDRY_ENDPOINT}/api/projects/{self.config.AI_FOUNDRY_PROJECT_NAME}"
+                    else:
+                        # Default to the endpoint pattern you showed
+                        endpoint = f"https://aif-general-dev-001.services.ai.azure.com/api/projects/{self.config.AI_FOUNDRY_PROJECT_NAME}"
+                    
+                    project = AIProjectClient(
+                        credential=credential,
+                        endpoint=endpoint
+                    )
+                    
+                    # Get the agent
+                    agent = project.agents.get_agent(self.config.AI_FOUNDRY_AGENT_ID)
+                    
+                    # Create or get existing thread for this conversation
+                    # For simplicity, create a new thread each time
+                    # In production, you might want to maintain thread per user session
+                    thread = project.agents.threads.create()
+                    
+                    # Add conversation history to thread if any
+                    history = self.shared_conversation_history.get_history()
+                    for msg in history[-5:]:  # Only last 5 messages to avoid token limits
+                        if msg['role'] == 'user':
+                            project.agents.messages.create(
+                                thread_id=thread.id,
+                                role="user",
+                                content=msg['content']
+                            )
+                        elif msg['role'] == 'assistant':
+                            project.agents.messages.create(
+                                thread_id=thread.id,
+                                role="assistant",
+                                content=msg['content']
+                            )
+                    
+                    # Add current user message
+                    self.shared_conversation_history.add_user_message(message)
+                    message_obj = project.agents.messages.create(
+                        thread_id=thread.id,
+                        role="user",
+                        content=message
+                    )
+                    
+                    # Run the agent
+                    run = await asyncio.to_thread(
+                        project.agents.runs.create_and_process,
+                        thread_id=thread.id,
+                        agent_id=agent.id
+                    )
+                    
+                    if run.status == "failed":
+                        logger.error(f"Agent run failed: {run.last_error}")
+                        raise Exception(f"Agent run failed: {run.last_error}")
+                    
+                    # Get the response
+                    from azure.ai.agents.models import ListSortOrder
+                    messages = project.agents.messages.list(
+                        thread_id=thread.id, 
+                        order=ListSortOrder.DESCENDING
+                    )
+                    
+                    # Find the latest assistant message
+                    for msg in messages:
+                        if msg.role == "assistant" and msg.text_messages:
+                            ai_response = msg.text_messages[-1].text.value
+                            self.shared_conversation_history.add_assistant_message(ai_response)
+                            logger.info("Successfully used AI Foundry agent for text response")
+                            return ai_response
+                        
+                except Exception as e:
+                    logger.warning(f"AI Foundry agent not available, falling back to standard AI service: {e}")
+                    # Fall back to bot's AI service
+            
+            # Fallback to bot's existing AI service
             if self.bot.ai_agent_service and self.bot.ai_agent_service.is_available():
-                # Add to conversation history
-                self.bot.conversation_history.add_user_message(message)
+                # Add to shared conversation history
+                self.shared_conversation_history.add_user_message(message)
                 
                 # Get AI response
                 ai_response = await self.bot.ai_agent_service.get_response(
                     message, 
-                    self.bot.conversation_history.get_history()
+                    self.shared_conversation_history.get_history()
                 )
                 
                 if ai_response:
-                    self.bot.conversation_history.add_assistant_message(ai_response)
+                    self.shared_conversation_history.add_assistant_message(ai_response)
                     return ai_response
             
             # Fallback response

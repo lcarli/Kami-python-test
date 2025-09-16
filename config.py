@@ -18,20 +18,14 @@ class DefaultConfig:
     APP_ID = os.environ.get("MicrosoftAppId", "")
     APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
     
-    # Azure Speech Service Configuration
-    SPEECH_KEY = os.environ.get("AZURE_SPEECH_KEY", "")
-    SPEECH_REGION = os.environ.get("AZURE_SPEECH_REGION", "")
-    
-    # Voice Live API Configuration 
-    VOICE_LIVE_ENDPOINT = os.environ.get("AZURE_VOICE_LIVE_ENDPOINT", "")
-    VOICE_LIVE_KEY = os.environ.get("AZURE_VOICE_LIVE_KEY", "")
-    AZURE_VOICE_LIVE_ENDPOINT = os.environ.get("AZURE_VOICE_LIVE_ENDPOINT", "")
-    AZURE_VOICE_LIVE_API_KEY = os.environ.get("AZURE_VOICE_LIVE_API_KEY", "")
-    AZURE_VOICE_LIVE_API_VERSION = os.environ.get("AZURE_VOICE_LIVE_API_VERSION", "2025-05-01-preview")
+    # Azure AI Foundry Configuration (unified for Voice Live and Agent)
+    AI_FOUNDRY_ENDPOINT = os.environ.get("AI_FOUNDRY_ENDPOINT", "")  # e.g., https://aif-general-dev-001.services.ai.azure.com
     AI_FOUNDRY_PROJECT_NAME = os.environ.get("AI_FOUNDRY_PROJECT_NAME", "")
     AI_FOUNDRY_AGENT_ID = os.environ.get("AI_FOUNDRY_AGENT_ID", "")
+    AI_FOUNDRY_API_KEY = os.environ.get("AI_FOUNDRY_API_KEY", "")
+    AI_FOUNDRY_API_VERSION = os.environ.get("AI_FOUNDRY_API_VERSION", "2025-05-01-preview")
     
-    # Azure AI Services Configuration
+    # Azure AI Services Configuration (fallback for when AI Foundry is not available)
     AI_PROJECT_CONNECTION_STRING = os.environ.get("AZURE_AI_PROJECT_CONNECTION_STRING", "")
     AI_MODEL_DEPLOYMENT_NAME = os.environ.get("AZURE_AI_MODEL_DEPLOYMENT_NAME", "gpt-4o")
     AI_ENDPOINT = os.environ.get("AZURE_AI_ENDPOINT", "")

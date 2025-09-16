@@ -3,54 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kami - Hybrid Chat & Voice Assistant</title>
+    <title>Kami Assistant</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <div class="chat-title">🤖 Kami Assistant</div>
-            <div class="mode-toggle">
-                <button class="toggle-button active" id="text-mode-btn">💬 Text</button>
-                <button class="toggle-button" id="voice-mode-btn">🎙️ Voice</button>
-                <div class="status-indicator status-ready" id="status-indicator"></div>
-            </div>
-        </div>
-        
-        <div class="chat-messages" id="chat-messages">
-            <div class="message bot">
-                <div class="message-bubble">
-                    Hello! I'm Kami, your AI assistant. You can chat with me using text or switch to voice mode for voice conversations. How can I help you today?
-                    <div class="message-time" id="initial-time"></div>
+    <div class="app">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">Kami</h1>
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="text-mode-btn" data-mode="text">Text</button>
+                    <button class="mode-btn" id="voice-mode-btn" data-mode="voice">Voice</button>
+                </div>
+                <div class="status-indicator" id="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Ready</span>
                 </div>
             </div>
-        </div>
-        
-        <div class="typing-indicator" id="typing-indicator">
-            Kami is typing...
-        </div>
-        
-        <div class="chat-input-container mode-text" id="input-container">
-            <div class="text-mode-controls">
-                <input type="text" class="chat-input" id="chat-input" placeholder="Type your message..." />
-                <button class="send-button" id="send-button">📤</button>
-                <button class="voice-button" id="voice-button">🎙️</button>
-            </div>
-            
-            <div class="voice-mode-controls">
-                <div class="voice-controls-row">
-                    <button class="voice-button" id="start-voice-button">🎙️</button>
-                    <button class="voice-button" id="stop-voice-button" style="background: #f44336;">⏹️</button>
+        </header>
+
+        <main class="chat-container">
+            <div class="messages-area" id="messages-area">
+                <div class="message-group">
+                    <div class="message assistant">
+                        <div class="message-content">
+                            <p>Hello! I'm Kami, your AI assistant. I can help you with questions, tasks, and conversations. How can I assist you today?</p>
+                            <time class="message-time" id="initial-time"></time>
+                        </div>
+                    </div>
                 </div>
-                <div class="voice-status" id="voice-status">Click the microphone to start voice conversation</div>
             </div>
-        </div>
+
+            <div class="typing-indicator hidden" id="typing-indicator">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="typing-text">Kami is thinking...</span>
+            </div>
+        </main>
+
+        <footer class="input-section">
+            <div class="input-container" id="input-container">
+                <!-- Text Mode -->
+                <div class="text-input-mode active" id="text-input-mode">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            class="message-input" 
+                            id="message-input" 
+                            placeholder="Type your message here..."
+                            autocomplete="off"
+                        />
+                        <button class="send-btn" id="send-btn" type="button">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m22 2-7 20-4-9-9-4z"/>
+                                <path d="M22 2 11 13"/>
+                            </svg>
+                        </button>
+                        <button class="voice-toggle-btn" id="voice-toggle-btn" type="button">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <path d="M12 19v4"/>
+                                <path d="M8 23h8"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voice Mode -->
+                <div class="voice-input-mode" id="voice-input-mode">
+                    <div class="voice-controls">
+                        <button class="voice-record-btn" id="voice-record-btn" type="button">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <path d="M12 19v4"/>
+                                <path d="M8 23h8"/>
+                            </svg>
+                        </button>
+                        <button class="voice-stop-btn hidden" id="voice-stop-btn" type="button">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="6" y="6" width="12" height="12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="voice-status" id="voice-status">Click to start voice conversation</p>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script src="/static/script.js"></script>
     <script>
-        // Set initial time
-        document.getElementById('initial-time').textContent = new Date().toLocaleTimeString();
+        // Set initial timestamp
+        document.getElementById('initial-time').textContent = new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     </script>
 </body>
 </html>

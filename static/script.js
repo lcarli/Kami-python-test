@@ -1,9 +1,9 @@
 /**
- * Kami Hybrid Chat Bot - JavaScript Client
- * Handles text chat and voice live conversation
+ * Kami Chat Assistant - Modern JavaScript Client
+ * Handles text chat and voice conversation
  */
 
-class HybridChatBot {
+class KamiChat {
     constructor() {
         this.currentMode = 'text';
         this.ws = null;
@@ -18,17 +18,28 @@ class HybridChatBot {
     
     initializeElements() {
         this.elements = {
-            chatMessages: document.getElementById('chat-messages'),
-            chatInput: document.getElementById('chat-input'),
-            sendButton: document.getElementById('send-button'),
-            voiceButton: document.getElementById('voice-button'),
-            startVoiceButton: document.getElementById('start-voice-button'),
-            stopVoiceButton: document.getElementById('stop-voice-button'),
+            // Main containers
+            messagesArea: document.getElementById('messages-area'),
+            inputContainer: document.getElementById('input-container'),
+            
+            // Mode controls
             textModeBtn: document.getElementById('text-mode-btn'),
             voiceModeBtn: document.getElementById('voice-mode-btn'),
-            inputContainer: document.getElementById('input-container'),
-            statusIndicator: document.getElementById('status-indicator'),
+            textInputMode: document.getElementById('text-input-mode'),
+            voiceInputMode: document.getElementById('voice-input-mode'),
+            
+            // Text mode elements
+            messageInput: document.getElementById('message-input'),
+            sendBtn: document.getElementById('send-btn'),
+            voiceToggleBtn: document.getElementById('voice-toggle-btn'),
+            
+            // Voice mode elements
+            voiceRecordBtn: document.getElementById('voice-record-btn'),
+            voiceStopBtn: document.getElementById('voice-stop-btn'),
             voiceStatus: document.getElementById('voice-status'),
+            
+            // Status and indicators
+            statusIndicator: document.getElementById('status-indicator'),
             typingIndicator: document.getElementById('typing-indicator')
         };
     }
@@ -38,16 +49,28 @@ class HybridChatBot {
         this.elements.textModeBtn.addEventListener('click', () => this.switchMode('text'));
         this.elements.voiceModeBtn.addEventListener('click', () => this.switchMode('voice'));
         
-        // Text mode
-        this.elements.sendButton.addEventListener('click', () => this.sendTextMessage());
-        this.elements.chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.sendTextMessage();
+        // Text mode controls
+        this.elements.sendBtn.addEventListener('click', () => this.sendTextMessage());
+        this.elements.messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendTextMessage();
+            }
         });
+        this.elements.voiceToggleBtn.addEventListener('click', () => this.switchMode('voice'));
         
-        // Voice mode
-        this.elements.voiceButton.addEventListener('click', () => this.toggleVoiceMode());
-        this.elements.startVoiceButton.addEventListener('click', () => this.startVoiceConversation());
-        this.elements.stopVoiceButton.addEventListener('click', () => this.stopVoiceConversation());
+        // Voice mode controls
+        this.elements.voiceRecordBtn.addEventListener('click', () => this.startVoiceConversation());
+        this.elements.voiceStopBtn.addEventListener('click', () => this.stopVoiceConversation());
+        
+        // Auto-resize input
+        this.elements.messageInput.addEventListener('input', () => this.autoResizeInput());
+    }
+    
+    autoResizeInput() {
+        const input = this.elements.messageInput;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     }
     
     connectWebSocket() {
@@ -58,7 +81,7 @@ class HybridChatBot {
         
         this.ws.onopen = () => {
             this.isConnected = true;
-            this.updateStatus('ready');
+            this.updateStatus('ready', 'Ready');
             console.log('WebSocket connected');
         };
         
@@ -69,7 +92,7 @@ class HybridChatBot {
         
         this.ws.onclose = () => {
             this.isConnected = false;
-            this.updateStatus('error');
+            this.updateStatus('error', 'Disconnected');
             console.log('WebSocket disconnected');
             // Attempt to reconnect after 3 seconds
             setTimeout(() => this.connectWebSocket(), 3000);
@@ -77,14 +100,14 @@ class HybridChatBot {
         
         this.ws.onerror = (error) => {
             console.error('WebSocket error:', error);
-            this.updateStatus('error');
+            this.updateStatus('error', 'Connection Error');
         };
     }
     
     handleWebSocketMessage(data) {
         switch (data.type) {
             case 'text_response':
-                this.addMessage('bot', data.message);
+                this.addMessage('assistant', data.message);
                 this.hideTypingIndicator();
                 break;
             case 'voice_status':
@@ -92,33 +115,45 @@ class HybridChatBot {
                 break;
             case 'error':
                 this.showError(data.message);
+                this.hideTypingIndicator();
                 break;
         }
     }
     
     switchMode(mode) {
+        if (this.currentMode === mode) return;
+        
         this.currentMode = mode;
         
-        // Update UI
+        // Update mode buttons
         this.elements.textModeBtn.classList.toggle('active', mode === 'text');
         this.elements.voiceModeBtn.classList.toggle('active', mode === 'voice');
-        this.elements.inputContainer.className = `chat-input-container mode-${mode}`;
+        
+        // Update input modes
+        this.elements.textInputMode.classList.toggle('active', mode === 'text');
+        this.elements.voiceInputMode.classList.toggle('active', mode === 'voice');
         
         // Stop voice if switching to text
         if (mode === 'text' && this.isVoiceActive) {
             this.stopVoiceConversation();
         }
         
+        // Focus appropriate input
+        if (mode === 'text') {
+            this.elements.messageInput.focus();
+        }
+        
         console.log(`Switched to ${mode} mode`);
     }
     
     async sendTextMessage() {
-        const message = this.elements.chatInput.value.trim();
+        const message = this.elements.messageInput.value.trim();
         if (!message || !this.isConnected) return;
         
         // Add user message to chat
         this.addMessage('user', message);
-        this.elements.chatInput.value = '';
+        this.elements.messageInput.value = '';
+        this.autoResizeInput();
         this.showTypingIndicator();
         
         try {
@@ -132,7 +167,7 @@ class HybridChatBot {
             
             const data = await response.json();
             if (data.success) {
-                this.addMessage('bot', data.response);
+                this.addMessage('assistant', data.response);
             } else {
                 this.showError(data.error || 'Failed to send message');
             }
@@ -140,12 +175,6 @@ class HybridChatBot {
             this.showError('Network error: ' + error.message);
         } finally {
             this.hideTypingIndicator();
-        }
-    }
-    
-    toggleVoiceMode() {
-        if (this.currentMode === 'text') {
-            this.switchMode('voice');
         }
     }
     
@@ -329,7 +358,7 @@ class HybridChatBot {
                 case 'response_text':
                     // Handle text response from Voice Live
                     if (data.text) {
-                        this.addMessage('bot', data.text);
+                        this.addMessage('assistant', data.text);
                     }
                     break;
                     
@@ -396,57 +425,110 @@ class HybridChatBot {
     }
     
     addMessage(sender, text) {
+        // Create message group if this is the first message or sender changed
+        let messageGroup = this.elements.messagesArea.lastElementChild;
+        
+        if (!messageGroup || !messageGroup.classList.contains('message-group') ||
+            messageGroup.dataset.sender !== sender) {
+            messageGroup = document.createElement('div');
+            messageGroup.className = 'message-group';
+            messageGroup.dataset.sender = sender;
+            this.elements.messagesArea.appendChild(messageGroup);
+        }
+        
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
         
-        const time = new Date().toLocaleTimeString();
+        const time = new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
         messageDiv.innerHTML = `
-            <div class="message-bubble">
-                ${text}
-                <div class="message-time">${time}</div>
+            <div class="message-content">
+                <p>${this.escapeHtml(text)}</p>
+                <time class="message-time">${time}</time>
             </div>
         `;
         
-        this.elements.chatMessages.appendChild(messageDiv);
-        this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+        messageGroup.appendChild(messageDiv);
+        this.scrollToBottom();
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    scrollToBottom() {
+        this.elements.messagesArea.scrollTop = this.elements.messagesArea.scrollHeight;
     }
     
     showTypingIndicator() {
-        this.elements.typingIndicator.style.display = 'block';
-        this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+        this.elements.typingIndicator.classList.remove('hidden');
+        this.scrollToBottom();
     }
     
     hideTypingIndicator() {
-        this.elements.typingIndicator.style.display = 'none';
+        this.elements.typingIndicator.classList.add('hidden');
     }
     
-    updateStatus(status) {
-        const indicator = this.elements.statusIndicator;
-        indicator.className = `status-indicator status-${status}`;
+    updateStatus(status, text) {
+        const statusText = this.elements.statusIndicator.querySelector('.status-text');
+        const statusDot = this.elements.statusIndicator.querySelector('.status-dot');
+        
+        if (statusText) statusText.textContent = text;
+        
+        // Update status dot color based on status
+        statusDot.style.background = status === 'ready' ? '#22c55e' : 
+                                   status === 'listening' ? '#3b82f6' :
+                                   status === 'error' ? '#ef4444' : '#94a3b8';
     }
     
     updateVoiceStatus(message) {
         this.elements.voiceStatus.textContent = message;
+        
+        // Update voice button states
+        const isRecording = message.toLowerCase().includes('recording') || 
+                           message.toLowerCase().includes('listening');
+        
+        this.elements.voiceRecordBtn.classList.toggle('recording', isRecording);
+        this.elements.voiceRecordBtn.classList.toggle('hidden', isRecording);
+        this.elements.voiceStopBtn.classList.toggle('hidden', !isRecording);
     }
     
     showError(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = `Error: ${message}`;
+        // Create error message group
+        const messageGroup = document.createElement('div');
+        messageGroup.className = 'message-group';
         
-        this.elements.chatMessages.appendChild(errorDiv);
-        this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'message assistant';
+        errorDiv.innerHTML = `
+            <div class="message-content" style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;">
+                <p>⚠️ ${this.escapeHtml(message)}</p>
+                <time class="message-time">${new Date().toLocaleTimeString([], {
+                    hour: '2-digit', 
+                    minute: '2-digit'
+                })}</time>
+            </div>
+        `;
+        
+        messageGroup.appendChild(errorDiv);
+        this.elements.messagesArea.appendChild(messageGroup);
+        this.scrollToBottom();
         
         // Remove error after 5 seconds
         setTimeout(() => {
-            if (errorDiv.parentNode) {
-                errorDiv.parentNode.removeChild(errorDiv);
+            if (messageGroup.parentNode) {
+                messageGroup.remove();
             }
         }, 5000);
     }
 }
 
-// Initialize the chat bot when page loads
+// Initialize the chat when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new HybridChatBot();
+    new KamiChat();
 });
