@@ -14,13 +14,30 @@
         <header class="header">
             <div class="header-content">
                 <h1 class="title">Kami</h1>
-                <div class="mode-selector">
-                    <button class="mode-btn active" id="text-mode-btn" data-mode="text">Text</button>
-                    <button class="mode-btn" id="voice-mode-btn" data-mode="voice">Voice</button>
+                <div class="voice-controls-header">
+                    <button class="mic-mute-btn" id="mic-mute-btn" title="Toggle Microphone">
+                        <svg class="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <path d="M12 19v4"/>
+                            <path d="M8 23h8"/>
+                        </svg>
+                        <svg class="mic-muted-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                            <path d="M9 9v3a3 3 0 0 0 5.12 2.12l1.27-1.27A3 3 0 0 0 15 12V4a3 3 0 0 0-3-3c-1.66 0-3 1.34-3 3v1"/>
+                            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                            <path d="M12 19v4"/>
+                            <path d="M8 23h8"/>
+                        </svg>
+                    </button>
+                    <div class="wake-word-indicator" id="wake-word-indicator">
+                        <span class="wake-word-dot"></span>
+                        <span class="wake-word-text">Listening for "Hey, Kami"</span>
+                    </div>
                 </div>
                 <div class="status-indicator" id="status-indicator">
                     <span class="status-dot"></span>
-                    <span class="status-text">Ready</span>
+                    <span class="status-text">Voice Active</span>
                 </div>
             </div>
         </header>
@@ -49,52 +66,22 @@
 
         <footer class="input-section">
             <div class="input-container" id="input-container">
-                <!-- Text Mode -->
-                <div class="text-input-mode active" id="text-input-mode">
-                    <div class="input-group">
-                        <input 
-                            type="text" 
-                            class="message-input" 
-                            id="message-input" 
-                            placeholder="Type your message here..."
-                            autocomplete="off"
-                        />
-                        <button class="send-btn" id="send-btn" type="button">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="m22 2-7 20-4-9-9-4z"/>
-                                <path d="M22 2 11 13"/>
-                            </svg>
-                        </button>
-                        <button class="voice-toggle-btn" id="voice-toggle-btn" type="button">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <path d="M12 19v4"/>
-                                <path d="M8 23h8"/>
-                            </svg>
-                        </button>
-                    </div>
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="message-input" 
+                        id="message-input" 
+                        placeholder="Type your message or say 'Hey, Kami' to talk..."
+                        autocomplete="off"
+                    />
+                    <button class="send-btn" id="send-btn" type="button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m22 2-7 20-4-9-9-4z"/>
+                            <path d="M22 2 11 13"/>
+                        </svg>
+                    </button>
                 </div>
-
-                <!-- Voice Mode -->
-                <div class="voice-input-mode" id="voice-input-mode">
-                    <div class="voice-controls">
-                        <button class="voice-record-btn" id="voice-record-btn" type="button">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <path d="M12 19v4"/>
-                                <path d="M8 23h8"/>
-                            </svg>
-                        </button>
-                        <button class="voice-stop-btn hidden" id="voice-stop-btn" type="button">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="6" y="6" width="12" height="12"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="voice-status" id="voice-status">Click to start voice conversation</p>
-                </div>
+                <p class="voice-status" id="voice-status">Voice conversation ready</p>
             </div>
         </footer>
     </div>

@@ -5,15 +5,23 @@
 
 class KamiChat {
     constructor() {
-        this.currentMode = 'text';
         this.ws = null;
         this.voiceWs = null;
         this.isVoiceActive = false;
         this.isConnected = false;
         
+        // Wake word detection
+        this.isWakeWordListening = false;
+        this.isMicMuted = false;
+        this.recognition = null;
+        this.wakeWordTimeout = null;
+        this.isWakeWordTriggered = false;
+        
         this.initializeElements();
         this.setupEventListeners();
         this.connectWebSocket();
+        this.initializeWakeWordDetection();
+        this.startVoiceConversation(); // Auto-start voice conversation
     }
     
     initializeElements() {
@@ -22,21 +30,16 @@ class KamiChat {
             messagesArea: document.getElementById('messages-area'),
             inputContainer: document.getElementById('input-container'),
             
-            // Mode controls
-            textModeBtn: document.getElementById('text-mode-btn'),
-            voiceModeBtn: document.getElementById('voice-mode-btn'),
-            textInputMode: document.getElementById('text-input-mode'),
-            voiceInputMode: document.getElementById('voice-input-mode'),
-            
-            // Text mode elements
+            // Input elements
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
-            voiceToggleBtn: document.getElementById('voice-toggle-btn'),
             
-            // Voice mode elements
-            voiceRecordBtn: document.getElementById('voice-record-btn'),
-            voiceStopBtn: document.getElementById('voice-stop-btn'),
+            // Voice status
             voiceStatus: document.getElementById('voice-status'),
+            
+            // Wake word and microphone controls
+            micMuteBtn: document.getElementById('mic-mute-btn'),
+            wakeWordIndicator: document.getElementById('wake-word-indicator'),
             
             // Status and indicators
             statusIndicator: document.getElementById('status-indicator'),
@@ -45,11 +48,7 @@ class KamiChat {
     }
     
     setupEventListeners() {
-        // Mode switching
-        this.elements.textModeBtn.addEventListener('click', () => this.switchMode('text'));
-        this.elements.voiceModeBtn.addEventListener('click', () => this.switchMode('voice'));
-        
-        // Text mode controls
+        // Text input controls
         this.elements.sendBtn.addEventListener('click', () => this.sendTextMessage());
         this.elements.messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -57,11 +56,9 @@ class KamiChat {
                 this.sendTextMessage();
             }
         });
-        this.elements.voiceToggleBtn.addEventListener('click', () => this.switchMode('voice'));
         
-        // Voice mode controls
-        this.elements.voiceRecordBtn.addEventListener('click', () => this.startVoiceConversation());
-        this.elements.voiceStopBtn.addEventListener('click', () => this.stopVoiceConversation());
+        // Wake word and microphone controls
+        this.elements.micMuteBtn.addEventListener('click', () => this.toggleMicrophone());
         
         // Auto-resize input
         this.elements.messageInput.addEventListener('input', () => this.autoResizeInput());
@@ -118,32 +115,6 @@ class KamiChat {
                 this.hideTypingIndicator();
                 break;
         }
-    }
-    
-    switchMode(mode) {
-        if (this.currentMode === mode) return;
-        
-        this.currentMode = mode;
-        
-        // Update mode buttons
-        this.elements.textModeBtn.classList.toggle('active', mode === 'text');
-        this.elements.voiceModeBtn.classList.toggle('active', mode === 'voice');
-        
-        // Update input modes
-        this.elements.textInputMode.classList.toggle('active', mode === 'text');
-        this.elements.voiceInputMode.classList.toggle('active', mode === 'voice');
-        
-        // Stop voice if switching to text
-        if (mode === 'text' && this.isVoiceActive) {
-            this.stopVoiceConversation();
-        }
-        
-        // Focus appropriate input
-        if (mode === 'text') {
-            this.elements.messageInput.focus();
-        }
-        
-        console.log(`Switched to ${mode} mode`);
     }
     
     async sendTextMessage() {
@@ -488,14 +459,6 @@ class KamiChat {
     
     updateVoiceStatus(message) {
         this.elements.voiceStatus.textContent = message;
-        
-        // Update voice button states
-        const isRecording = message.toLowerCase().includes('recording') || 
-                           message.toLowerCase().includes('listening');
-        
-        this.elements.voiceRecordBtn.classList.toggle('recording', isRecording);
-        this.elements.voiceRecordBtn.classList.toggle('hidden', isRecording);
-        this.elements.voiceStopBtn.classList.toggle('hidden', !isRecording);
     }
     
     showError(message) {
@@ -525,6 +488,137 @@ class KamiChat {
                 messageGroup.remove();
             }
         }, 5000);
+    }
+    
+    // Wake word detection methods
+    initializeWakeWordDetection() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.warn('Speech recognition not supported');
+            this.elements.wakeWordIndicator.style.display = 'none';
+            return;
+        }
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        this.recognition = new SpeechRecognition();
+        
+        this.recognition.continuous = true;
+        this.recognition.interimResults = false;
+        this.recognition.lang = 'pt-BR';
+        
+        this.recognition.onresult = (event) => {
+            const lastResult = event.results[event.results.length - 1];
+            if (lastResult.isFinal) {
+                const transcript = lastResult[0].transcript.toLowerCase().trim();
+                console.log('Wake word detection:', transcript);
+                
+                if (transcript.includes('hey kami') || transcript.includes('ei kami') || transcript.includes('oi kami')) {
+                    this.triggerWakeWord();
+                }
+            }
+        };
+        
+        this.recognition.onerror = (event) => {
+            console.error('Wake word recognition error:', event.error);
+            if (event.error === 'not-allowed') {
+                this.toggleMicrophone(); // Mute if permission denied
+            }
+        };
+        
+        this.recognition.onend = () => {
+            if (this.isWakeWordListening && !this.isMicMuted) {
+                // Restart recognition if it stops unexpectedly
+                setTimeout(() => {
+                    if (this.isWakeWordListening && !this.isMicMuted) {
+                        try {
+                            this.recognition.start();
+                        } catch (e) {
+                            console.log('Recognition restart failed:', e);
+                        }
+                    }
+                }, 1000);
+            }
+        };
+        
+        this.startWakeWordDetection();
+    }
+    
+    startWakeWordDetection() {
+        if (!this.recognition || this.isMicMuted) return;
+        
+        try {
+            this.recognition.start();
+            this.isWakeWordListening = true;
+            this.updateWakeWordIndicator();
+            console.log('Wake word detection started');
+        } catch (e) {
+            console.log('Wake word detection already running');
+        }
+    }
+    
+    stopWakeWordDetection() {
+        if (!this.recognition) return;
+        
+        this.recognition.stop();
+        this.isWakeWordListening = false;
+        this.updateWakeWordIndicator();
+        console.log('Wake word detection stopped');
+    }
+    
+    toggleMicrophone() {
+        this.isMicMuted = !this.isMicMuted;
+        
+        if (this.isMicMuted) {
+            this.stopWakeWordDetection();
+        } else {
+            this.startWakeWordDetection();
+        }
+        
+        this.updateMicrophoneState();
+        this.updateWakeWordIndicator();
+    }
+    
+    updateMicrophoneState() {
+        const micIcon = this.elements.micMuteBtn.querySelector('.mic-icon');
+        const micMutedIcon = this.elements.micMuteBtn.querySelector('.mic-muted-icon');
+        
+        if (this.isMicMuted) {
+            this.elements.micMuteBtn.classList.add('muted');
+            micIcon.classList.add('hidden');
+            micMutedIcon.classList.remove('hidden');
+        } else {
+            this.elements.micMuteBtn.classList.remove('muted');
+            micIcon.classList.remove('hidden');
+            micMutedIcon.classList.add('hidden');
+        }
+    }
+    
+    updateWakeWordIndicator() {
+        if (this.isMicMuted) {
+            this.elements.wakeWordIndicator.classList.add('muted');
+            this.elements.wakeWordIndicator.classList.remove('triggered');
+        } else {
+            this.elements.wakeWordIndicator.classList.remove('muted');
+            if (this.isWakeWordTriggered) {
+                this.elements.wakeWordIndicator.classList.add('triggered');
+            } else {
+                this.elements.wakeWordIndicator.classList.remove('triggered');
+            }
+        }
+    }
+    
+    triggerWakeWord() {
+        console.log('Wake word triggered: Hey, Kami!');
+        this.isWakeWordTriggered = true;
+        this.updateWakeWordIndicator();
+        
+        // Voice conversation is already active, just show triggered state
+        
+        // Reset triggered state after 3 seconds
+        clearTimeout(this.wakeWordTimeout);
+        this.wakeWordTimeout = setTimeout(() => {
+            this.isWakeWordTriggered = false;
+            this.updateWakeWordIndicator();
+        }, 3000);
     }
 }
 
