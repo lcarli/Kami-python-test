@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kami - Hybrid Chat & Voice Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">🤖 Kami Assistant</div>
+            <div class="mode-toggle">
+                <button class="toggle-button active" id="text-mode-btn">💬 Text</button>
+                <button class="toggle-button" id="voice-mode-btn">🎙️ Voice</button>
+                <div class="status-indicator status-ready" id="status-indicator"></div>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot">
+                <div class="message-bubble">
+                    Hello! I'm Kami, your AI assistant. You can chat with me using text or switch to voice mode for voice conversations. How can I help you today?
+                    <div class="message-time" id="initial-time"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typing-indicator">
+            Kami is typing...
+        </div>
+        
+        <div class="chat-input-container mode-text" id="input-container">
+            <div class="text-mode-controls">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Type your message..." />
+                <button class="send-button" id="send-button">📤</button>
+                <button class="voice-button" id="voice-button">🎙️</button>
+            </div>
+            
+            <div class="voice-mode-controls">
+                <div class="voice-controls-row">
+                    <button class="voice-button" id="start-voice-button">🎙️</button>
+                    <button class="voice-button" id="stop-voice-button" style="background: #f44336;">⏹️</button>
+                </div>
+                <div class="voice-status" id="voice-status">Click the microphone to start voice conversation</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        // Set initial time
+        document.getElementById('initial-time').textContent = new Date().toLocaleTimeString();
+    </script>
+</body>
+</html>
