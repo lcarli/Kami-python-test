@@ -1,6 +1,15 @@
-# KAMI Bot - Hybrid AI Voice & Text Assistant
+# KA## ✨ Features
 
-KAMI (Knowledge and Azure Multilingual Intelligence) is an AI-powered hybrid conversational assistant that seamlessly combines text chat and voice conversation in one unified interface. Built with Azure AI Foundry and Azure Voice Live API, KAMI provides intelligent responses through both text and real-time voice interaction.
+- **🎯 Wake Word Detection**: Automatically activates voice conversation when you say "Hey, Kami"
+- **🤖 AI-Powered**: Intelligent responses using Azure AI Foundry agent
+- **🎤 Always-On Voice**: Voice Live conversation ready from startup
+- **💬 Unified Interface**: Type messages or speak naturally with wake word
+- **🔇 Smart Microphone Control**: Mute/unmute microphone with visual indicators
+- **🌐 Modern Web Interface**: Clean, responsive browser-based interface
+- **⚡ Auto-Start**: Voice conversation active immediately on launch
+- **🛡️ Secure**: Environment-based Azure credential managementI Voice Assistant with Wake Word Detection
+
+KAMI (Knowledge and Azure Multilingual Intelligence) is an AI-powered voice assistant that combines intelligent text chat with automatic voice activation through wake word detection. Built with Azure AI Foundry and Azure Voice Live API, KAMI provides a seamless hands-free conversation experience that activates when you say "Hey, Kami".
 
 ## ✨ Features
 
@@ -37,17 +46,17 @@ AZURE_VOICE_LIVE_ENDPOINT=https://your-endpoint.cognitiveservices.azure.com/
 AZURE_VOICE_LIVE_KEY=your_voice_live_key
 ```
 
-### 3. Launch Hybrid Bot
+### 3. Launch KAMI
 ```bash
-python start_all.py
+python hybrid_bot.py
 ```
 
 ### 4. Start Conversing
-- Browser automatically opens to: `http://localhost:3978/hybrid`
-- Type messages for text chat
-- Click "Start Voice" for voice conversation
-- Seamlessly switch between text and voice modes
-- Enjoy AI-powered hybrid conversations!
+- Browser opens to: `http://localhost:3978`
+- **Voice is automatically active** - just say "Hey, Kami" to talk
+- **Type messages** anytime for text chat
+- **Use microphone button** to mute/unmute when needed
+- Enjoy hands-free AI conversations!
 
 ## 📋 Prerequisites
 
@@ -157,101 +166,99 @@ AZURE_VOICE_LIVE_KEY=your-voice-live-key-here
 PORT=3978
 ```
 
-## Running the Hybrid Bot
+## Running KAMI Bot
 
-### Using the startup script (recommended)
+### Using the direct launch (recommended)
 
 ```bash
-python start_all.py
+python hybrid_bot.py
 ```
 
 The bot will automatically:
-- Start the hybrid server on port 3978
-- Open your browser to the hybrid interface
+- Start the KAMI server on port 3978
+- Initialize wake word detection for "Hey, Kami"
+- Start Voice Live conversation automatically
+- Open browser to the KAMI interface
 - Display service status and features
 
 ### Expected Output
 
-When the bot starts successfully, you should see:
+When KAMI starts successfully, you should see:
 
 ```
-KAMI HYBRID BOT
-==================================================
-AI-Powered Text & Voice Conversation
-Azure Voice Live Integration
-Seamless Hybrid Interface
-==================================================
-
-Starting Kami Hybrid Bot...
-Waiting for Hybrid Bot...
-Hybrid Bot is ready!
-
-SERVICE STATUS:
-----------------------------------------
-Kami Hybrid Bot: RUNNING
-   • Text Chat: http://localhost:3978
-   • Voice Live: http://localhost:3978/hybrid
-
-FEATURES:
-• Text chat with AI agent
-• Voice Live conversation with Azure
-• Seamless switching between text and voice
-• AI-powered responses
-
-⌨CONTROLS:
-• Ctrl+C: Stop server
-
-Browser opened to http://localhost:3978/hybrid
-Kami Hybrid Bot started successfully!
-Ready for text and voice conversations!
+[HYBRID] Starting Kami Hybrid Bot on port 3978
+   [WEB] Interface: http://localhost:3978
+   [CHAT] Text & Voice: http://localhost:3978/hybrid
+   [INFO] Press Ctrl+C to stop
 ```
 
-## Using the Hybrid Interface
+Browser opens automatically to KAMI interface with:
+- Wake word detection active and listening for "Hey, Kami"
+- Voice Live conversation ready
+- Text input available anytime
+- Microphone controls visible in header
+
+## Using KAMI Interface
+
+### Wake Word Voice Activation
+1. **Say "Hey, Kami"** to automatically start voice conversation
+2. **Speak naturally** - your voice is processed in real-time
+3. **Listen to AI responses** through voice synthesis
+4. **Continue talking** or return to text input
 
 ### Text Chat
-1. **Type messages** in the chat input field
+1. **Type messages** in the chat input field anytime
 2. **Press Enter** or click Send to send messages
 3. **Receive AI responses** from your Azure AI Foundry agent
 4. **View conversation history** in the chat area
 
-### Voice Live Conversation
-1. **Click "Start Voice"** to begin voice session
-2. **Speak naturally** - your voice is processed in real-time
-3. **Listen to AI responses** through voice synthesis
-4. **Click "Stop Voice"** to end voice session and return to text
+### Microphone Control
+1. **Microphone is active by default** for wake word detection
+2. **Click microphone button** in header to mute/unmute
+3. **Visual indicators** show microphone and wake word status
+4. **Green pulsing dot** = listening for "Hey, Kami"
+5. **Red indicator** = microphone muted
 
-### Seamless Switching
-- Switch between text and voice modes at any time
-- Conversation context is maintained across modes
-- Both modes use the same Azure AI Foundry agent
+### Unified Experience
+- Voice conversation starts automatically when KAMI loads
+- Wake word detection runs continuously in background
+- Type messages anytime while wake word detection is active
+- Same Azure AI Foundry agent handles both text and voice
+- Conversation context preserved across interaction types
 
-## Testing the Hybrid Bot
+## Testing KAMI Bot
+
+### Testing Wake Word Detection
+1. **Start KAMI**: `python hybrid_bot.py`
+2. **Open browser** to `http://localhost:3978`
+3. **Grant microphone permissions** when prompted by browser
+4. **Say "Hey, Kami"** and verify voice conversation starts
+5. **Check wake word indicator** shows "triggered" state
 
 ### Testing Text Chat
-1. **Start the bot**: `python start_all.py`
-2. **Open browser** to `http://localhost:3978/hybrid`
-3. **Type messages** in the chat input field
-4. **Verify AI responses** from Azure AI Foundry agent
+1. **Type messages** in the chat input field
+2. **Press Enter** to send messages
+3. **Verify AI responses** from Azure AI Foundry agent
+4. **Test while wake word is active** to ensure both work together
 
-### Testing Voice Live
-1. **Click "Start Voice"** in the hybrid interface
-2. **Grant microphone permissions** when prompted by browser
-3. **Speak to test** real-time voice conversation
-4. **Verify voice responses** from Azure Voice Live API
-5. **Check console output** for Voice Live service status
+### Testing Voice Conversation
+1. **Say "Hey, Kami"** to activate voice conversation
+2. **Speak naturally** to test real-time voice processing
+3. **Verify voice responses** from Azure Voice Live API
+4. **Check console output** for Voice Live service status
+
+### Testing Microphone Controls
+1. **Click microphone button** in header to mute
+2. **Verify wake word indicator** shows "muted" state
+3. **Test that wake word detection stops** when muted
+4. **Click microphone button again** to unmute and resume
 
 ### Testing Environment Configuration
-The bot will display configuration status on startup:
+KAMI will display configuration status on startup:
 - AI Foundry agent connection status
 - Voice Live API availability
 - Required environment variables validation
-
-### Testing Hybrid Mode Switching
-1. **Start with text chat** - send a few messages
-2. **Switch to voice mode** - click "Start Voice"
-3. **Continue conversation by voice** - speak naturally
-4. **Switch back to text** - click "Stop Voice"
-5. **Verify context preservation** across modes
+- Wake word detection initialization
 
 ### Testing Voice Features with Real Audio
 
@@ -394,12 +401,14 @@ If you encounter issues not covered here:
 ## Project Structure
 
 ```
-├── hybrid_bot.py       # Main hybrid interface with text chat and voice live integration
-├── voice_live_service.py # Azure Voice Live API implementation
+├── hybrid_bot.py       # Main KAMI interface with wake word detection and auto-start voice
 ├── ai_agent_service.py # Azure AI Foundry agent integration
 ├── bot.py              # Core bot logic and conversation handling
 ├── config.py           # Configuration settings and environment variables
-├── start_all.py        # Main startup script for hybrid mode
+├── static/             # Web interface files
+│   ├── index.html      # KAMI web interface with wake word controls
+│   ├── styles.css      # Modern responsive styling
+│   └── script.js       # Wake word detection and voice/text integration
 ├── requirements.txt    # Python dependencies
 ├── prompt_kami.md      # AI agent prompt configuration
 ├── .gitignore         # Git ignore file
@@ -408,48 +417,52 @@ If you encounter issues not covered here:
 
 ### File Descriptions
 
-- **`hybrid_bot.py`**: Main application providing unified interface for text chat and voice conversation with seamless mode switching
-- **`voice_live_service.py`**: Complete Azure Voice Live API implementation with real-time voice processing and AI Foundry agent integration
-- **`ai_agent_service.py`**: Handles Azure AI Foundry agent communication for intelligent responses in both text and voice modes
+- **`hybrid_bot.py`**: Main KAMI application with wake word detection, auto-start voice conversation, and unified text/voice interface
+- **`ai_agent_service.py`**: Handles Azure AI Foundry agent communication for intelligent responses in both text and voice interactions
 - **`bot.py`**: Core bot framework logic supporting conversation management and message processing
 - **`config.py`**: Manages all configuration settings including Azure credentials and service endpoints
-- **`start_all.py`**: Simplified launcher that starts the hybrid bot interface directly
+- **`static/`**: Web interface files for KAMI's browser-based interface
+  - **`index.html`**: Main web interface with wake word indicators and microphone controls
+  - **`styles.css`**: Modern, clean styling with responsive design
+  - **`script.js`**: JavaScript handling wake word detection, voice activation, and text chat
 - **`prompt_kami.md`**: Contains the AI agent personality and behavior configuration
 
 ## How It Works
 
-### Hybrid Architecture
+### Wake Word Detection Architecture
 
-The KAMI bot uses a unified hybrid architecture that seamlessly integrates text and voice conversation:
+KAMI uses an always-on voice architecture with intelligent wake word detection:
 
-1. **Hybrid Interface** (`hybrid_bot.py`): Provides web-based interface supporting both text chat and voice live sessions
-2. **Voice Live Integration**: Real-time voice conversation using Azure Voice Live API with AI Foundry agent
-3. **Text Chat Integration**: Traditional text-based conversation using the same AI Foundry agent
-4. **Seamless Switching**: Users can switch between text and voice modes while maintaining conversation context
+1. **Auto-Start Voice Live**: Voice conversation activates automatically when KAMI loads
+2. **Continuous Wake Word Listening**: Browser-based speech recognition listens for "Hey, Kami"
+3. **Instant Voice Activation**: Speaking the wake word immediately triggers voice conversation
+4. **Unified AI Agent**: Same Azure AI Foundry agent handles both text and voice interactions
+5. **Smart Microphone Control**: Visual indicators and mute controls for user privacy
 
 ### Message Flow
 
 #### Text Chat Flow
 1. User types message in web interface
-2. Message sent to hybrid bot server
+2. Message sent to KAMI server
 3. AI Agent Service processes message through Azure AI Foundry
 4. Intelligent response returned to web interface
 5. Response displayed in chat area
 
-#### Voice Live Flow
-1. User speaks into microphone
-2. Voice captured by browser and sent to Voice Live service
-3. Azure Voice Live API processes speech in real-time
-4. Voice Live service forwards to Azure AI Foundry agent
-5. AI agent generates response
-6. Response synthesized to speech and played back
+#### Wake Word Voice Flow
+1. User says "Hey, Kami" (wake word detected by browser)
+2. Voice conversation automatically activates
+3. User speaks - voice captured and sent to Voice Live service
+4. Azure Voice Live API processes speech in real-time
+5. Voice Live service forwards to Azure AI Foundry agent
+6. AI agent generates response
+7. Response synthesized to speech and played back
 
 ### AI Processing
 
-Both text and voice modes use the same Azure AI Foundry agent:
+Both text and voice use the same Azure AI Foundry agent:
 - **Agent ID**: Configured in environment variables
 - **Project Integration**: Connected to Azure AI Foundry project
-- **Context Preservation**: Conversation history maintained across modes
+- **Context Preservation**: Conversation history maintained across interaction types
 - **Intelligent Responses**: Powered by Azure AI Foundry's advanced language models  
 3. **Text-to-Speech**: Response text → Azure Speech Service → Audio output
 4. **Voice Live Agent**: Manages real-time voice interactions and session state
@@ -471,6 +484,15 @@ The AI-powered bot implements the `ActivityHandler` class and overrides:
 ## Troubleshooting
 
 ### Common Issues
+
+#### Wake word detection not working
+
+**Common causes and solutions**:
+- **Browser microphone permissions**: Grant microphone access when prompted by browser
+- **Speech recognition not supported**: Wake word detection requires modern browsers (Chrome/Edge recommended)
+- **Microphone muted**: Check that microphone button in header is not muted (should show green pulsing dot)
+- **Language settings**: Wake word detection is configured for Portuguese ("Hey, Kami", "Ei, Kami", "Oi, Kami")
+- **Background noise**: Ensure clear speech in quiet environment for better detection
 
 #### Voice Live not working / "Voice features are not available"
 
@@ -505,14 +527,19 @@ python start_all.py
 
 #### Browser microphone permissions
 
-**Solution**: Grant microphone permissions when prompted by the browser for Voice Live functionality.
+**Solution**: 
+- Grant microphone permissions when prompted by the browser for wake word detection and Voice Live functionality
+- If permissions were denied, click the microphone icon in browser address bar to enable
+- For Chrome: Settings > Privacy and security > Site Settings > Microphone
+- For Edge: Settings > Site permissions > Microphone
 
-#### Hybrid interface not loading
+#### KAMI interface not loading
 
 **Common causes and solutions**:
-- **Bot not running**: Ensure the bot shows "Hybrid Bot is ready!" message
-- **Wrong URL**: Access `http://localhost:3978/hybrid` (note the `/hybrid` path)
+- **Bot not running**: Ensure KAMI shows startup messages and "Press Ctrl+C to stop"
+- **Wrong URL**: Access `http://localhost:3978` (main interface, not `/hybrid`)
 - **Browser cache**: Try refreshing the page or clearing browser cache
+- **JavaScript disabled**: Ensure JavaScript is enabled for wake word detection to work
 
 ### Getting Help
 
