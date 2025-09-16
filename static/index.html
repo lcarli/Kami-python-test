@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kami Assistant</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">Kami</h1>
+                <div class="voice-controls-header">
+                    <button class="mic-mute-btn" id="mic-mute-btn" title="Toggle Microphone">
+                        <svg class="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <path d="M12 19v4"/>
+                            <path d="M8 23h8"/>
+                        </svg>
+                        <svg class="mic-muted-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                            <path d="M9 9v3a3 3 0 0 0 5.12 2.12l1.27-1.27A3 3 0 0 0 15 12V4a3 3 0 0 0-3-3c-1.66 0-3 1.34-3 3v1"/>
+                            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                            <path d="M12 19v4"/>
+                            <path d="M8 23h8"/>
+                        </svg>
+                    </button>
+                    <div class="wake-word-indicator" id="wake-word-indicator">
+                        <span class="wake-word-dot"></span>
+                        <span class="wake-word-text">Listening for "Hey, Kami"</span>
+                    </div>
+                </div>
+                <div class="status-indicator" id="status-indicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Voice Active</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="chat-container">
+            <div class="messages-area" id="messages-area">
+                <div class="message-group">
+                    <div class="message assistant">
+                        <div class="message-content">
+                            <p>Hello! I'm Kami, your AI assistant. I can help you with questions, tasks, and conversations. How can I assist you today?</p>
+                            <time class="message-time" id="initial-time"></time>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator hidden" id="typing-indicator">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="typing-text">Kami is thinking...</span>
+            </div>
+        </main>
+
+        <footer class="input-section">
+            <div class="input-container" id="input-container">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="message-input" 
+                        id="message-input" 
+                        placeholder="Type your message or say 'Hey, Kami' to talk..."
+                        autocomplete="off"
+                    />
+                    <button class="send-btn" id="send-btn" type="button">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m22 2-7 20-4-9-9-4z"/>
+                            <path d="M22 2 11 13"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="voice-status" id="voice-status">Voice conversation ready</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+    <script>
+        // Set initial timestamp
+        document.getElementById('initial-time').textContent = new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    </script>
+</body>
+</html>
