@@ -213,6 +213,9 @@ class VoiceLiveService:
         self.threads = []
         self.running = False
         
+        # Mute control - NEW FEATURE
+        self.is_muted = False
+        
         # Use provided config or load from environment
         if config:
             self.endpoint = config.AI_FOUNDRY_ENDPOINT
@@ -338,6 +341,39 @@ class VoiceLiveService:
         except Exception as e:
             logger.error(f"Error stopping Voice Live session: {e}")
 
+    def set_mute(self, muted: bool):
+        """Control mute state of Voice Live audio capture"""
+        was_muted = self.is_muted
+        self.is_muted = muted
+        status = "muted" if muted else "unmuted"
+        logger.info(f"Voice Live audio capture {status}")
+        
+        # Se estava mutado e agora desmutou, limpar buffer e reinicializar
+        if was_muted and not muted and self.connection:
+            logger.info("Unmuted - clearing audio buffer and reinitializing")
+            self._mute_logged = False  # Reset log flag
+            try:
+                # Limpar buffer de áudio pendente
+                clear_buffer_msg = {
+                    "type": "input_audio_buffer.clear",
+                    "event_id": ""
+                }
+                self.connection.send(json.dumps(clear_buffer_msg))
+                
+                # Enviar comando para reinicializar conversação se necessário
+                reset_msg = {
+                    "type": "response.create",
+                    "event_id": ""
+                }
+                # Opcional: só descomenta se necessário
+                # self.connection.send(json.dumps(reset_msg))
+                
+            except Exception as e:
+                logger.error(f"Error reinitializing after unmute: {e}")
+        
+        if self.callback_handler:
+            self.callback_handler("mute_changed", {"muted": muted})
+
     def _listen_and_send_audio(self):
         """Listen to microphone and send audio to Voice Live API"""
         logger.info("Starting audio stream...")
@@ -349,11 +385,27 @@ class VoiceLiveService:
             while not stop_event.is_set() and self.running:
                 if stream.read_available >= read_size:
                     data, _ = stream.read(read_size)
-                    audio = base64.b64encode(data).decode("utf-8")
-                    param = {"type": "input_audio_buffer.append", "audio": audio, "event_id": ""}
-                    data_json = json.dumps(param)
-                    if self.connection:
-                        self.connection.send(data_json)
+                    
+                    # MUTE CONTROL: Only send audio if not muted
+                    if not self.is_muted:
+                        audio = base64.b64encode(data).decode("utf-8")
+                        param = {"type": "input_audio_buffer.append", "audio": audio, "event_id": ""}
+                        data_json = json.dumps(param)
+                        if self.connection:
+                            self.connection.send(data_json)
+                            # Log ocasional para debug (a cada 100 chunks)
+                            if hasattr(self, '_audio_chunk_count'):
+                                self._audio_chunk_count += 1
+                            else:
+                                self._audio_chunk_count = 1
+                            
+                            if self._audio_chunk_count % 100 == 0:
+                                logger.debug(f"Sent audio chunk #{self._audio_chunk_count}")
+                    else:
+                        # Audio is muted - skip sending but keep reading to prevent buffer overflow
+                        if not hasattr(self, '_mute_logged') or not self._mute_logged:
+                            logger.info("Audio muted - discarding audio data")
+                            self._mute_logged = True
                 else:
                     time.sleep(0.001)
                     

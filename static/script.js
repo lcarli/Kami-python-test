@@ -16,6 +16,16 @@ class KamiChat {
         this.recognition = null;
         this.wakeWordTimeout = null;
         this.isWakeWordTriggered = false;
+        this.wasVoiceActiveBeforeMute = false; // Track voice state before muting
+        
+        // Voice session control - só processa áudio após wake word
+        this.voiceSession = {
+            active: false,           // Se a sessão está ativa
+            timeout: null,           // Timer para desativar sessão
+            duration: 20000,         // 20 segundos de duração
+            extendOnSpeech: true,    // Estender quando detectar fala
+            volumeThreshold: 0.01    // Threshold para detectar fala
+        };
         
         this.initializeElements();
         this.setupEventListeners();
@@ -222,12 +232,26 @@ class KamiChat {
             this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
             
             this.processor.onaudioprocess = (event) => {
-                if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
-                    const inputData = event.inputBuffer.getChannelData(0);
+                const inputData = event.inputBuffer.getChannelData(0);
+                
+                // Calcular volume para detectar fala
+                const volume = this.calculateVolume(inputData);
+                
+                // SÓ PROCESSA se sessão de voz estiver ativa
+                if (this.voiceSession.active && this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
                     
-                    // Convert to 16-bit PCM and send to Voice Live
+                    // Se detectar fala (volume acima do threshold), estender sessão
+                    if (volume > this.voiceSession.volumeThreshold) {
+                        this.extendVoiceSession();
+                    }
+                    
+                    // Enviar áudio para Voice Live
                     const pcmData = this.convertToPCM16(inputData);
                     this.voiceWs.send(pcmData);
+                    
+                } else if (!this.voiceSession.active) {
+                    // Sessão inativa - áudio ignorado
+                    // console.log('Voice session inactive - audio ignored');
                 }
             };
             
@@ -235,7 +259,7 @@ class KamiChat {
             this.source.connect(this.processor);
             this.processor.connect(this.audioContext.destination);
             
-            this.updateVoiceStatus('Voice Live active - speak now!');
+            this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
             
         } catch (error) {
             console.error('Error setting up audio streaming:', error);
@@ -255,6 +279,64 @@ class KamiChat {
         }
         
         return buffer;
+    }
+    
+    calculateVolume(float32Array) {
+        // Calcula RMS (Root Mean Square) para detectar nível de fala
+        let sum = 0;
+        for (let i = 0; i < float32Array.length; i++) {
+            sum += float32Array[i] * float32Array[i];
+        }
+        return Math.sqrt(sum / float32Array.length);
+    }
+    
+    extendVoiceSession() {
+        // Estende a sessão quando detectar fala
+        if (this.voiceSession.active && this.voiceSession.extendOnSpeech) {
+            this.setSessionTimeout();
+            console.log('Voice session extended due to speech detection');
+        }
+    }
+    
+    activateVoiceSession() {
+        // Ativar sessão de voz temporária
+        this.voiceSession.active = true;
+        console.log('Voice session activated - Voice Live now listening');
+        
+        // Atualizar status visual
+        this.updateVoiceStatus('Kami active - speak now! (20s)');
+        
+        // Configurar timeout automático
+        this.setSessionTimeout();
+    }
+    
+    deactivateVoiceSession() {
+        // Desativar sessão de voz
+        this.voiceSession.active = false;
+        console.log('Voice session deactivated - Voice Live stopped listening');
+        
+        // Limpar timeout se existir
+        if (this.voiceSession.timeout) {
+            clearTimeout(this.voiceSession.timeout);
+            this.voiceSession.timeout = null;
+        }
+        
+        // Atualizar status visual
+        this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+    }
+    
+    setSessionTimeout() {
+        // Limpar timeout anterior se existir
+        if (this.voiceSession.timeout) {
+            clearTimeout(this.voiceSession.timeout);
+        }
+        
+        // Configurar novo timeout
+        this.voiceSession.timeout = setTimeout(() => {
+            this.deactivateVoiceSession();
+        }, this.voiceSession.duration);
+        
+        console.log(`Voice session timeout set for ${this.voiceSession.duration}ms`);
     }
     
     stopVoiceConversation() {
@@ -341,6 +423,32 @@ class KamiChat {
                 case 'error':
                     this.showError('Voice Live error: ' + (data.message || 'Unknown error'));
                     break;
+                
+                case 'status':
+                    // Handle status messages from Voice Live
+                    console.log('Voice Live status:', data.message || 'Status update');
+                    break;
+                    
+                case 'session_created':
+                    // Handle session creation confirmation
+                    console.log('Voice Live session created:', data.session_id || 'Session active');
+                    this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+                    break;
+                    
+                case 'speech_started':
+                    // Handle speech detection
+                    console.log('Speech started detected by Voice Live');
+                    break;
+                    
+                case 'audio_transcript':
+                    // Handle audio transcript from Voice Live (agent speech)
+                    console.log('Agent audio transcript:', data.text || 'Audio generated');
+                    break;
+                    
+                case 'mute_status':
+                    // Handle mute confirmation from backend
+                    console.log('Mute status confirmed:', data.muted ? 'muted' : 'unmuted');
+                    break;
                     
                 default:
                     console.log('Unknown voice message type:', data.type);
@@ -378,7 +486,12 @@ class KamiChat {
                     
                     source.onended = () => {
                         this.updateStatus('listening');
-                        this.updateVoiceStatus('Voice Live active - speak now!');
+                        // Mostrar status baseado no estado da sessão
+                        if (this.voiceSession.active) {
+                            this.updateVoiceStatus('Kami active - speak now!');
+                        } else {
+                            this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+                        }
                     };
                     
                     this.updateStatus('speaking');
@@ -511,7 +624,21 @@ class KamiChat {
                 const transcript = lastResult[0].transcript.toLowerCase().trim();
                 console.log('Wake word detection:', transcript);
                 
-                if (transcript.includes('hey kami') || transcript.includes('ei kami') || transcript.includes('oi kami')) {
+                // Melhorada detecção de wake word - mais flexível
+                const wakeWords = [
+                    'hey kami', 'ei kami', 'oi kami', 
+                    'hey camila', 'ei camila', 'oi camila',
+                    'hey kamy', 'ei kamy', 'oi kamy'
+                ];
+                
+                const foundWakeWord = wakeWords.some(word => {
+                    // Remove acentos e espaços extras para melhor matching
+                    const cleanTranscript = transcript.replace(/[áàâã]/g, 'a').replace(/[éê]/g, 'e').replace(/[íî]/g, 'i');
+                    return cleanTranscript.includes(word) || transcript.includes(word);
+                });
+                
+                if (foundWakeWord) {
+                    console.log('✅ Wake word detected!');
                     this.triggerWakeWord();
                 }
             }
@@ -568,9 +695,54 @@ class KamiChat {
         this.isMicMuted = !this.isMicMuted;
         
         if (this.isMicMuted) {
+            // Stop both wake word detection AND voice conversation COMPLETELY
             this.stopWakeWordDetection();
+            
+            // Desativar sessão de voz
+            this.deactivateVoiceSession();
+            
+            // Store voice state to restore later
+            this.wasVoiceActiveBeforeMute = this.isVoiceActive;
+            
+            // NEW: Send mute command to backend Voice Live service
+            if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
+                this.voiceWs.send(JSON.stringify({
+                    'type': 'mute_voice_live',
+                    'muted': true
+                }));
+            }
+            
+            // DON'T stop Voice Live conversation - just mute it
+            // The backend will handle the muting, keep connection alive
+            // if (this.isVoiceActive) {
+            //     this.stopVoiceConversation();
+            // }
+            
+            console.log('Microphone muted - all audio stopped');
+            this.updateVoiceStatus('Microphone Muted - Voice Live paused');
+            
         } else {
+            // Resume both wake word detection AND voice conversation
             this.startWakeWordDetection();
+            
+            // NEW: Send unmute command to backend Voice Live service
+            if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
+                this.voiceWs.send(JSON.stringify({
+                    'type': 'mute_voice_live',
+                    'muted': false
+                }));
+            }
+            
+            // DON'T restart Voice Live conversation - it should still be connected
+            // Just unmute the backend, connection should remain active
+            // if (this.wasVoiceActiveBeforeMute) {
+            //     setTimeout(() => {
+            //         this.startVoiceConversation();
+            //     }, 500);
+            // }
+            
+            console.log('Microphone unmuted - audio resumed');
+            this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
         }
         
         this.updateMicrophoneState();
@@ -611,7 +783,8 @@ class KamiChat {
         this.isWakeWordTriggered = true;
         this.updateWakeWordIndicator();
         
-        // Voice conversation is already active, just show triggered state
+        // NOVA FUNCIONALIDADE: Ativar sessão de voz
+        this.activateVoiceSession();
         
         // Reset triggered state after 3 seconds
         clearTimeout(this.wakeWordTimeout);

@@ -12,7 +12,7 @@ from ai_agent_service import AIAgentService, ConversationHistory
 from config import DefaultConfig
 
 
-class EchoBot(ActivityHandler):
+class KamiBot(ActivityHandler):
     """
     Enhanced bot with AI agent capabilities using Azure AI Foundry.
     This bot will respond using AI agent intelligence instead of simple echoing.

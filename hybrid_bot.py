@@ -18,7 +18,7 @@ from aiohttp import web, WSMsgType
 from aiohttp.web import Application, Request, Response, WebSocketResponse
 import aiohttp_cors
 
-from bot import EchoBot
+from bot import KamiBot
 from config import DefaultConfig
 from voice_live_service import VoiceLiveService
 from ai_agent_service import ConversationHistory
@@ -34,7 +34,7 @@ class HybridBot:
     def __init__(self):
         # Initialize bot components
         self.config = DefaultConfig()
-        self.bot = EchoBot()
+        self.bot = KamiBot()
         self.voice_live_service = None
         self.current_voice_connection = None
         
@@ -613,6 +613,24 @@ class HybridBot:
             elif message_type == 'voice_message':
                 # This should not be used with real Voice Live - audio goes directly from microphone
                 logger.debug("Received voice_message - this should not happen with Voice Live")
+            
+            elif message_type == 'mute_voice_live':
+                # NEW: Handle mute/unmute commands for Voice Live service
+                muted = data.get('muted', False)
+                if self.voice_live_service:
+                    self.voice_live_service.set_mute(muted)
+                    logger.info(f"Voice Live {'muted' if muted else 'unmuted'} via WebSocket command")
+                    
+                    await ws.send_str(json.dumps({
+                        'type': 'mute_status',
+                        'muted': muted,
+                        'message': f"Voice Live {'muted' if muted else 'unmuted'} successfully"
+                    }))
+                else:
+                    await ws.send_str(json.dumps({
+                        'type': 'error',
+                        'message': 'Voice Live service not available for mute control'
+                    }))
                     
         except Exception as e:
             logger.error(f"Error handling voice WebSocket message: {e}")
