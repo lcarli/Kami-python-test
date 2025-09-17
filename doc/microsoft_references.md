@@ -30,3 +30,7 @@ General Python development on Azure
 Notes
 
 - Use these pages to find SDK references, code samples, and configuration details. If you use Azure services in this project, consult each service's quickstarts to find sample code and the latest SDK install instructions.
+
+Microsoft Teams
+
+- Calls & meetings bots (overview): https://learn.microsoft.com/en-us/microsoftteams/platform/bots/calls-and-meetings/calls-meetings-bots-overview
