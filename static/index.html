@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Toast notification container -->
+    <div class="toast-container" id="toast-container"></div>
+    
     <div class="app">
         <header class="header">
             <div class="header-content">
@@ -33,6 +36,7 @@
                     <div class="wake-word-indicator" id="wake-word-indicator">
                         <span class="wake-word-dot"></span>
                         <span class="wake-word-text">Listening for "Hey, Kami"</span>
+                        <span class="session-countdown hidden" id="session-countdown"></span>
                     </div>
                 </div>
                 <div class="status-indicator" id="status-indicator">

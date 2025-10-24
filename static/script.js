@@ -17,6 +17,7 @@ class KamiChat {
         this.wakeWordTimeout = null;
         this.isWakeWordTriggered = false;
         this.wasVoiceActiveBeforeMute = false; // Track voice state before muting
+        this.isKamiSpeaking = false; // Track when Kami is speaking to prevent echo
         
         // Voice session control - só processa áudio após wake word
         this.voiceSession = {
@@ -24,7 +25,9 @@ class KamiChat {
             timeout: null,           // Timer para desativar sessão
             duration: 20000,         // 20 segundos de duração
             extendOnSpeech: true,    // Estender quando detectar fala
-            volumeThreshold: 0.01    // Threshold para detectar fala
+            volumeThreshold: 0.01,   // Threshold para detectar fala
+            countdownInterval: null, // Interval for countdown display
+            startTime: null          // Track when session started
         };
         
         this.initializeElements();
@@ -50,10 +53,12 @@ class KamiChat {
             // Wake word and microphone controls
             micMuteBtn: document.getElementById('mic-mute-btn'),
             wakeWordIndicator: document.getElementById('wake-word-indicator'),
+            sessionCountdown: document.getElementById('session-countdown'),
             
             // Status and indicators
             statusIndicator: document.getElementById('status-indicator'),
-            typingIndicator: document.getElementById('typing-indicator')
+            typingIndicator: document.getElementById('typing-indicator'),
+            toastContainer: document.getElementById('toast-container')
         };
     }
     
@@ -165,7 +170,7 @@ class KamiChat {
         try {
             this.updateStatus('listening');
             this.isVoiceActive = true;
-            this.updateVoiceStatus('Starting Voice Live conversation...');
+            this.updateVoiceStatus('🔄 Starting voice conversation...');
             
             // Request microphone permission
             this.mediaStream = await navigator.mediaDevices.getUserMedia({ 
@@ -184,12 +189,10 @@ class KamiChat {
             this.voiceWs = new WebSocket(voiceWsUrl);
             
             this.voiceWs.onopen = () => {
-                console.log('Voice WebSocket connected');
+                console.log('Voice WebSocket connected - waiting for wake word');
                 
-                // Send start conversation message
-                this.voiceWs.send(JSON.stringify({
-                    'type': 'start_conversation'
-                }));
+                // DON'T send start_conversation automatically
+                // Wait for wake word detection to trigger Voice Live session
             };
             
             this.voiceWs.onmessage = (event) => {
@@ -238,6 +241,7 @@ class KamiChat {
                 const volume = this.calculateVolume(inputData);
                 
                 // SÓ PROCESSA se sessão de voz estiver ativa
+                // Voice Live tem echo cancellation - sempre enviar áudio
                 if (this.voiceSession.active && this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
                     
                     // Se detectar fala (volume acima do threshold), estender sessão
@@ -245,7 +249,7 @@ class KamiChat {
                         this.extendVoiceSession();
                     }
                     
-                    // Enviar áudio para Voice Live
+                    // Enviar áudio para Voice Live (tem echo cancellation no backend)
                     const pcmData = this.convertToPCM16(inputData);
                     this.voiceWs.send(pcmData);
                     
@@ -259,7 +263,7 @@ class KamiChat {
             this.source.connect(this.processor);
             this.processor.connect(this.audioContext.destination);
             
-            this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+            this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
             
         } catch (error) {
             console.error('Error setting up audio streaming:', error);
@@ -294,6 +298,7 @@ class KamiChat {
         // Estende a sessão quando detectar fala
         if (this.voiceSession.active && this.voiceSession.extendOnSpeech) {
             this.setSessionTimeout();
+            this.showToast('⏱️ Session extended', 'info', 2000);
             console.log('Voice session extended due to speech detection');
         }
     }
@@ -301,10 +306,18 @@ class KamiChat {
     activateVoiceSession() {
         // Ativar sessão de voz temporária
         this.voiceSession.active = true;
+        this.voiceSession.startTime = Date.now();
         console.log('Voice session activated - Voice Live now listening');
         
         // Atualizar status visual
-        this.updateVoiceStatus('Kami active - speak now! (20s)');
+        this.updateVoiceStatus('💬 Say \'Hey, Kami\' to start talking (lasts 20 seconds)');
+        
+        // Update wake word indicator to active state
+        this.elements.wakeWordIndicator.classList.add('active');
+        this.elements.wakeWordIndicator.classList.remove('warning');
+        
+        // Start countdown display
+        this.startCountdownDisplay();
         
         // Configurar timeout automático
         this.setSessionTimeout();
@@ -321,8 +334,73 @@ class KamiChat {
             this.voiceSession.timeout = null;
         }
         
+        // Stop countdown display
+        this.stopCountdownDisplay();
+        
+        // Remove active/warning states
+        this.elements.wakeWordIndicator.classList.remove('active', 'warning');
+        
         // Atualizar status visual
-        this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+        this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
+    }
+    
+    startCountdownDisplay() {
+        // Clear any existing countdown
+        this.stopCountdownDisplay();
+        
+        // Show countdown element
+        this.elements.sessionCountdown.classList.remove('hidden');
+        
+        // Track if we've shown the warning toast
+        let warningShown = false;
+        
+        // Update countdown every 100ms for smooth display
+        this.voiceSession.countdownInterval = setInterval(() => {
+            if (!this.voiceSession.active || !this.voiceSession.startTime) {
+                this.stopCountdownDisplay();
+                return;
+            }
+            
+            const elapsed = Date.now() - this.voiceSession.startTime;
+            const remaining = Math.max(0, Math.ceil((this.voiceSession.duration - elapsed) / 1000));
+            
+            // Update countdown text
+            this.elements.sessionCountdown.textContent = `${remaining}s`;
+            
+            // Show warning toast at 5 seconds
+            if (remaining === 5 && !warningShown) {
+                this.showToast('⏱️ Voice session ending in 5 seconds...', 'warning', 3000);
+                warningShown = true;
+            }
+            
+            // Add warning class when less than 5 seconds
+            if (remaining <= 5 && remaining > 0) {
+                this.elements.wakeWordIndicator.classList.add('warning');
+                this.elements.wakeWordIndicator.classList.remove('active');
+            } else if (remaining > 5) {
+                this.elements.wakeWordIndicator.classList.add('active');
+                this.elements.wakeWordIndicator.classList.remove('warning');
+            }
+            
+            // Update status message with countdown
+            if (remaining > 0) {
+                this.updateVoiceStatus(`🎤 Listening... (${remaining}s remaining)`);
+            }
+        }, 100);
+    }
+    
+    stopCountdownDisplay() {
+        // Clear countdown interval
+        if (this.voiceSession.countdownInterval) {
+            clearInterval(this.voiceSession.countdownInterval);
+            this.voiceSession.countdownInterval = null;
+        }
+        
+        // Hide countdown element
+        if (this.elements.sessionCountdown) {
+            this.elements.sessionCountdown.classList.add('hidden');
+            this.elements.sessionCountdown.textContent = '';
+        }
     }
     
     setSessionTimeout() {
@@ -330,6 +408,9 @@ class KamiChat {
         if (this.voiceSession.timeout) {
             clearTimeout(this.voiceSession.timeout);
         }
+        
+        // Reset start time for countdown
+        this.voiceSession.startTime = Date.now();
         
         // Configurar novo timeout
         this.voiceSession.timeout = setTimeout(() => {
@@ -344,7 +425,7 @@ class KamiChat {
         
         this.isVoiceActive = false;
         this.updateStatus('ready');
-        this.updateVoiceStatus('Click the microphone to start voice conversation');
+        this.updateVoiceStatus('Voice conversation ready');
         
         // Clean up audio context and processor
         if (this.processor) {
@@ -386,11 +467,11 @@ class KamiChat {
             
             switch (data.type) {
                 case 'voice_live_started':
-                    this.updateVoiceStatus('Voice Live conversation started');
+                    this.updateVoiceStatus('✅ Voice ready! Say "Hey, Kami" to talk');
                     break;
                     
                 case 'voice_live_connected':
-                    this.updateVoiceStatus('Connected to Azure Voice Live API');
+                    this.updateVoiceStatus('✅ Connected! Say "Hey, Kami" to start');
                     break;
                     
                 case 'audio_response':
@@ -401,17 +482,19 @@ class KamiChat {
                     break;
                     
                 case 'transcript':
-                    // Handle transcript from Voice Live
+                    // Handle transcript from Voice Live - AUDIO ONLY MODE
+                    // Do NOT add to chat - voice conversations are audio-only
                     if (data.text) {
-                        this.addMessage('user', data.text);
-                        this.updateVoiceStatus('Processing your message...');
+                        console.log('User voice input (not shown in chat):', data.text);
+                        this.updateVoiceStatus('🤔 Thinking...');
                     }
                     break;
                     
                 case 'response_text':
-                    // Handle text response from Voice Live
+                    // Handle text response from Voice Live - AUDIO ONLY MODE
+                    // Do NOT add to chat - voice conversations are audio-only
                     if (data.text) {
-                        this.addMessage('assistant', data.text);
+                        console.log('Agent text response (not shown in chat):', data.text);
                     }
                     break;
                     
@@ -432,7 +515,7 @@ class KamiChat {
                 case 'session_created':
                     // Handle session creation confirmation
                     console.log('Voice Live session created:', data.session_id || 'Session active');
-                    this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+                    this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
                     break;
                     
                 case 'speech_started':
@@ -484,21 +567,32 @@ class KamiChat {
                     source.buffer = audioBuffer;
                     source.connect(this.audioContext.destination);
                     
+                    // Store reference to stop if interrupted
+                    this.currentAudioSource = source;
+                    
                     source.onended = () => {
+                        this.isKamiSpeaking = false;
+                        this.currentAudioSource = null;
                         this.updateStatus('listening');
+                        
                         // Mostrar status baseado no estado da sessão
                         if (this.voiceSession.active) {
-                            this.updateVoiceStatus('Kami active - speak now!');
+                            const elapsed = Date.now() - this.voiceSession.startTime;
+                            const remaining = Math.max(0, Math.ceil((this.voiceSession.duration - elapsed) / 1000));
+                            this.updateVoiceStatus(`🎤 Listening... (${remaining}s remaining)`);
                         } else {
-                            this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+                            this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
                         }
                     };
                     
+                    this.isKamiSpeaking = true;
                     this.updateStatus('speaking');
-                    this.updateVoiceStatus('Playing response...');
+                    this.updateVoiceStatus('🔊 Speaking...');
                     source.start();
                 })
                 .catch(error => {
+                    this.isKamiSpeaking = false;
+                    this.currentAudioSource = null;
                     console.error('Error playing audio:', error);
                     this.updateVoiceStatus('Error playing audio response');
                 });
@@ -601,6 +695,61 @@ class KamiChat {
                 messageGroup.remove();
             }
         }, 5000);
+    }
+    
+    // Toast notification system
+    showToast(message, type = 'info', duration = 3000) {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        // Icon based on type
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+            <span class="toast-message">${this.escapeHtml(message)}</span>
+            <span class="toast-close">×</span>
+        `;
+        
+        // Add to container
+        this.elements.toastContainer.appendChild(toast);
+        
+        // Click to dismiss
+        const closeBtn = toast.querySelector('.toast-close');
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.dismissToast(toast);
+        });
+        
+        // Click anywhere on toast to dismiss
+        toast.addEventListener('click', () => {
+            this.dismissToast(toast);
+        });
+        
+        // Auto-dismiss after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                this.dismissToast(toast);
+            }, duration);
+        }
+        
+        return toast;
+    }
+    
+    dismissToast(toast) {
+        if (!toast || !toast.parentNode) return;
+        
+        toast.classList.add('toast-out');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300); // Match animation duration
     }
     
     // Wake word detection methods
@@ -712,6 +861,9 @@ class KamiChat {
                 }));
             }
             
+            // Show toast notification
+            this.showToast('🔇 Microphone muted', 'info', 2000);
+            
             // DON'T stop Voice Live conversation - just mute it
             // The backend will handle the muting, keep connection alive
             // if (this.isVoiceActive) {
@@ -719,7 +871,7 @@ class KamiChat {
             // }
             
             console.log('Microphone muted - all audio stopped');
-            this.updateVoiceStatus('Microphone Muted - Voice Live paused');
+            this.updateVoiceStatus('🔇 Microphone muted - click to resume');
             
         } else {
             // Resume both wake word detection AND voice conversation
@@ -733,6 +885,9 @@ class KamiChat {
                 }));
             }
             
+            // Show toast notification
+            this.showToast('🔊 Microphone active - say "Hey, Kami"', 'success', 2000);
+            
             // DON'T restart Voice Live conversation - it should still be connected
             // Just unmute the backend, connection should remain active
             // if (this.wasVoiceActiveBeforeMute) {
@@ -742,7 +897,7 @@ class KamiChat {
             // }
             
             console.log('Microphone unmuted - audio resumed');
-            this.updateVoiceStatus('Kami sleeping - say "Hey, Kami" to activate');
+            this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
         }
         
         this.updateMicrophoneState();
@@ -782,6 +937,25 @@ class KamiChat {
         console.log('Wake word triggered: Hey, Kami!');
         this.isWakeWordTriggered = true;
         this.updateWakeWordIndicator();
+        
+        // If Kami is speaking, interrupt her
+        if (this.isKamiSpeaking && this.currentAudioSource) {
+            console.log('Interrupting Kami - wake word detected while speaking');
+            this.currentAudioSource.stop();
+            this.currentAudioSource = null;
+            this.isKamiSpeaking = false;
+            this.showToast('🛑 Interrupted - listening now', 'info', 2000);
+        } else {
+            // Show toast notification for normal wake word detection
+            this.showToast('Wake word detected! Starting conversation...', 'success', 2000);
+        }
+        
+        // Send wake word detection to backend to start Voice Live
+        if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
+            this.voiceWs.send(JSON.stringify({
+                type: 'wake_word_detected'
+            }));
+        }
         
         // NOVA FUNCIONALIDADE: Ativar sessão de voz
         this.activateVoiceSession();

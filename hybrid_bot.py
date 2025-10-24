@@ -412,11 +412,11 @@ class HybridBot:
                 # Initialize Voice Live connection
                 await ws.send_str(json.dumps({
                     'type': 'status',
-                    'message': 'Voice Live connection established'
+                    'message': 'Voice Live connection established - waiting for wake word'
                 }))
                 
-                # Start Voice Live session in background
-                session_task = asyncio.create_task(self._handle_voice_live_session(ws))
+                # DON'T auto-start Voice Live session - wait for wake word detection
+                # session_task = asyncio.create_task(self._handle_voice_live_session(ws))
                 
                 async for msg in ws:
                     if msg.type == WSMsgType.TEXT:
@@ -592,12 +592,25 @@ class HybridBot:
         try:
             message_type = data.get('type')
             
-            if message_type == 'start_conversation':
-                # Voice Live session is already started by _handle_voice_live_session
-                # Just acknowledge the request
+            if message_type == 'wake_word_detected':
+                # NEW: Start Voice Live session when wake word is detected
+                logger.info("Wake word detected - starting Voice Live session")
+                
+                # Start Voice Live session if not already running
+                if not hasattr(self, 'voice_live_task') or self.voice_live_task.done():
+                    self.voice_live_task = asyncio.create_task(self._handle_voice_live_session(ws))
+                    
                 await ws.send_str(json.dumps({
                     'type': 'status',
-                    'message': 'Voice Live session already active'
+                    'message': 'Voice Live session started'
+                }))
+            
+            elif message_type == 'start_conversation':
+                # Deprecated - Voice Live should only start on wake word
+                logger.warning("start_conversation is deprecated - use wake_word_detected instead")
+                await ws.send_str(json.dumps({
+                    'type': 'status',
+                    'message': 'Use wake word to start conversation'
                 }))
                     
             elif message_type == 'stop_conversation':
