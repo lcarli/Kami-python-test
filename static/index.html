@@ -18,25 +18,19 @@
             <div class="header-content">
                 <h1 class="title">Kami</h1>
                 <div class="voice-controls-header">
-                    <button class="mic-mute-btn" id="mic-mute-btn" title="Toggle Microphone">
-                        <svg class="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="voice-live-btn" id="voice-live-btn" title="Start Voice Conversation">
+                        <svg class="voice-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                             <path d="M12 19v4"/>
                             <path d="M8 23h8"/>
                         </svg>
-                        <svg class="mic-muted-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="1" y1="1" x2="23" y2="23"/>
-                            <path d="M9 9v3a3 3 0 0 0 5.12 2.12l1.27-1.27A3 3 0 0 0 15 12V4a3 3 0 0 0-3-3c-1.66 0-3 1.34-3 3v1"/>
-                            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
-                            <path d="M12 19v4"/>
-                            <path d="M8 23h8"/>
-                        </svg>
+                        <span class="voice-btn-text">Start Voice</span>
                     </button>
-                    <div class="wake-word-indicator" id="wake-word-indicator">
-                        <span class="wake-word-dot"></span>
-                        <span class="wake-word-text">Listening for "Hey, Kami"</span>
-                        <span class="session-countdown hidden" id="session-countdown"></span>
+                    <div class="voice-session-indicator hidden" id="voice-session-indicator">
+                        <span class="voice-session-dot"></span>
+                        <span class="voice-session-text">Voice Active</span>
+                        <span class="session-countdown" id="session-countdown"></span>
                     </div>
                 </div>
                 <div class="status-indicator" id="status-indicator">
@@ -75,7 +69,7 @@
                         type="text" 
                         class="message-input" 
                         id="message-input" 
-                        placeholder="Type your message or say 'Hey, Kami' to talk..."
+                        placeholder="Type your message or click the voice button..."
                         autocomplete="off"
                     />
                     <button class="send-btn" id="send-btn" type="button">

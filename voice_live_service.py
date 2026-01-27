@@ -47,18 +47,21 @@ class VoiceLiveConnection:
 
     def connect(self) -> None:
         """Establish WebSocket connection"""
+        logger.info(f"Connecting to WebSocket URL: {self._url[:100]}...")
+        
         def on_message(ws, message):
             self._message_queue.put(message)
 
         def on_error(ws, error):
             logger.error(f"WebSocket error: {error}")
+            self._connected = False
 
         def on_close(ws, close_status_code, close_msg):
-            logger.info("WebSocket connection closed")
+            logger.info(f"WebSocket connection closed: status={close_status_code}, msg={close_msg}")
             self._connected = False
 
         def on_open(ws):
-            logger.info("WebSocket connection opened")
+            logger.info("WebSocket connection opened successfully")
             self._connected = True
 
         self._ws = websocket.WebSocketApp(
@@ -145,7 +148,7 @@ class AzureVoiceLive:
 class AudioPlayerAsync:
     """Asynchronous audio player for real-time playback"""
     
-    def __init__(self):
+    def __init__(self, on_playback_change=None):
         self.queue = deque()
         self.lock = threading.Lock()
         self.stream = sd.OutputStream(
@@ -156,6 +159,8 @@ class AudioPlayerAsync:
             blocksize=2400,
         )
         self.playing = False
+        self.is_speaking = False  # Track if audio is being played
+        self.on_playback_change = on_playback_change  # Callback for mute control
 
     def callback(self, outdata, frames, time, status):
         """Audio callback for sounddevice"""
@@ -171,6 +176,14 @@ class AudioPlayerAsync:
                     self.queue.appendleft(item[frames_needed:])
             if len(data) < frames:
                 data = np.concatenate((data, np.zeros(frames - len(data), dtype=np.int16)))
+            
+            # Check if queue is empty and we were speaking - means playback finished
+            if len(self.queue) == 0 and self.is_speaking:
+                self.is_speaking = False
+                if self.on_playback_change:
+                    # Schedule callback outside lock to avoid deadlock
+                    threading.Thread(target=self.on_playback_change, args=(False,), daemon=True).start()
+        
         outdata[:] = data.reshape(-1, 1)
 
     def add_data(self, data: bytes):
@@ -178,6 +191,13 @@ class AudioPlayerAsync:
         with self.lock:
             np_data = np.frombuffer(data, dtype=np.int16)
             self.queue.append(np_data)
+            
+            # Notify that we're about to speak (mute mic)
+            if not self.is_speaking:
+                self.is_speaking = True
+                if self.on_playback_change:
+                    self.on_playback_change(True)  # True = speaking started
+            
             if not self.playing and len(self.queue) > 0:
                 self.start()
 
@@ -192,14 +212,25 @@ class AudioPlayerAsync:
         with self.lock:
             self.queue.clear()
         self.playing = False
+        self.is_speaking = False
         self.stream.stop()
+        
+        # Notify that speaking stopped (unmute mic)
+        if self.on_playback_change:
+            self.on_playback_change(False)  # False = speaking stopped
 
     def terminate(self):
         """Terminate audio stream"""
         with self.lock:
             self.queue.clear()
+        self.playing = False
+        self.is_speaking = False
         self.stream.stop()
         self.stream.close()
+        
+        # Notify that speaking stopped
+        if self.on_playback_change:
+            self.on_playback_change(False)
 
 class VoiceLiveService:
     """Voice Live service manager"""
@@ -292,8 +323,16 @@ class VoiceLiveService:
             if self.callback_handler:
                 self.callback_handler("session_started", {"config": session_update})
 
-            # Initialize audio player
-            self.audio_player = AudioPlayerAsync()
+            # Initialize audio player with callback to mute mic during playback
+            def on_playback_change(is_speaking):
+                """Mute microphone while Kami is speaking to prevent feedback"""
+                self.is_muted = is_speaking
+                if is_speaking:
+                    logger.debug("Kami speaking - muting microphone to prevent feedback")
+                else:
+                    logger.debug("Kami stopped speaking - unmuting microphone")
+            
+            self.audio_player = AudioPlayerAsync(on_playback_change=on_playback_change)
             
             # Start threads
             self.running = True

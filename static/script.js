@@ -9,32 +9,11 @@ class KamiChat {
         this.voiceWs = null;
         this.isVoiceActive = false;
         this.isConnected = false;
-        
-        // Wake word detection
-        this.isWakeWordListening = false;
-        this.isMicMuted = false;
-        this.recognition = null;
-        this.wakeWordTimeout = null;
-        this.isWakeWordTriggered = false;
-        this.wasVoiceActiveBeforeMute = false; // Track voice state before muting
-        this.isKamiSpeaking = false; // Track when Kami is speaking to prevent echo
-        
-        // Voice session control - só processa áudio após wake word
-        this.voiceSession = {
-            active: false,           // Se a sessão está ativa
-            timeout: null,           // Timer para desativar sessão
-            duration: 20000,         // 20 segundos de duração
-            extendOnSpeech: true,    // Estender quando detectar fala
-            volumeThreshold: 0.01,   // Threshold para detectar fala
-            countdownInterval: null, // Interval for countdown display
-            startTime: null          // Track when session started
-        };
+        this.isVoiceSessionActive = false;
         
         this.initializeElements();
         this.setupEventListeners();
         this.connectWebSocket();
-        this.initializeWakeWordDetection();
-        this.startVoiceConversation(); // Auto-start voice conversation
     }
     
     initializeElements() {
@@ -47,13 +26,11 @@ class KamiChat {
             messageInput: document.getElementById('message-input'),
             sendBtn: document.getElementById('send-btn'),
             
-            // Voice status
-            voiceStatus: document.getElementById('voice-status'),
-            
-            // Wake word and microphone controls
-            micMuteBtn: document.getElementById('mic-mute-btn'),
-            wakeWordIndicator: document.getElementById('wake-word-indicator'),
+            // Voice controls
+            voiceLiveBtn: document.getElementById('voice-live-btn'),
+            voiceSessionIndicator: document.getElementById('voice-session-indicator'),
             sessionCountdown: document.getElementById('session-countdown'),
+            voiceStatus: document.getElementById('voice-status'),
             
             // Status and indicators
             statusIndicator: document.getElementById('status-indicator'),
@@ -72,8 +49,10 @@ class KamiChat {
             }
         });
         
-        // Wake word and microphone controls
-        this.elements.micMuteBtn.addEventListener('click', () => this.toggleMicrophone());
+        // Voice Live button
+        if (this.elements.voiceLiveBtn) {
+            this.elements.voiceLiveBtn.addEventListener('click', () => this.toggleVoiceLive());
+        }
         
         // Auto-resize input
         this.elements.messageInput.addEventListener('input', () => this.autoResizeInput());
@@ -170,29 +149,26 @@ class KamiChat {
         try {
             this.updateStatus('listening');
             this.isVoiceActive = true;
-            this.updateVoiceStatus('🔄 Starting voice conversation...');
+            this.isVoiceSessionActive = true;
+            this.updateVoiceStatus('🔄 Connecting to Voice Live...');
+            this.updateVoiceButton(true);
             
-            // Request microphone permission
-            this.mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    sampleRate: 24000,
-                    channelCount: 1,
-                    echoCancellation: true,
-                    noiseSuppression: true
-                }
-            });
-            
-            // Connect to voice WebSocket
+            // Connect to voice WebSocket (audio is captured server-side by Voice Live API)
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const voiceWsUrl = `${protocol}//${window.location.host}/api/voice/ws`;
             
             this.voiceWs = new WebSocket(voiceWsUrl);
             
             this.voiceWs.onopen = () => {
-                console.log('Voice WebSocket connected - waiting for wake word');
+                console.log('Voice WebSocket connected');
                 
-                // DON'T send start_conversation automatically
-                // Wait for wake word detection to trigger Voice Live session
+                // Send start command - Voice Live API will capture audio from server microphone
+                this.voiceWs.send(JSON.stringify({
+                    type: 'start_voice_session'
+                }));
+                
+                this.updateVoiceStatus('🎤 Voice active - speak now!');
+                this.showToast('🎤 Voice activated!', 'success', 2000);
             };
             
             this.voiceWs.onmessage = (event) => {
@@ -201,259 +177,72 @@ class KamiChat {
             };
             
             this.voiceWs.onclose = () => {
-                this.updateVoiceStatus('Voice Live conversation ended');
+                this.updateVoiceStatus('Voice conversation ended');
                 console.log('Voice WebSocket disconnected');
+                this.isVoiceActive = false;
+                this.isVoiceSessionActive = false;
+                this.updateVoiceButton(false);
             };
             
             this.voiceWs.onerror = (error) => {
                 console.error('Voice WebSocket error:', error);
-                this.showError('Voice Live connection error');
+                this.showError('Voice connection error');
+                this.isVoiceActive = false;
+                this.isVoiceSessionActive = false;
+                this.updateVoiceButton(false);
             };
             
-            // Setup audio streaming to Voice Live
-            this.setupAudioStreaming();
-            
-            console.log('Voice Live conversation started');
+            console.log('Voice conversation started - audio captured by Voice Live API');
             
         } catch (error) {
-            this.showError('Failed to start Voice Live conversation: ' + error.message);
+            this.showError('Failed to start voice: ' + error.message);
             this.stopVoiceConversation();
         }
     }
     
-    setupAudioStreaming() {
-        try {
-            // Create audio context for processing
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 24000
-            });
-            
-            // Create source from microphone stream
-            this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
-            
-            // Create script processor for audio data
-            this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
-            
-            this.processor.onaudioprocess = (event) => {
-                const inputData = event.inputBuffer.getChannelData(0);
-                
-                // Calcular volume para detectar fala
-                const volume = this.calculateVolume(inputData);
-                
-                // SÓ PROCESSA se sessão de voz estiver ativa
-                // Voice Live tem echo cancellation - sempre enviar áudio
-                if (this.voiceSession.active && this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
-                    
-                    // Se detectar fala (volume acima do threshold), estender sessão
-                    if (volume > this.voiceSession.volumeThreshold) {
-                        this.extendVoiceSession();
-                    }
-                    
-                    // Enviar áudio para Voice Live (tem echo cancellation no backend)
-                    const pcmData = this.convertToPCM16(inputData);
-                    this.voiceWs.send(pcmData);
-                    
-                } else if (!this.voiceSession.active) {
-                    // Sessão inativa - áudio ignorado
-                    // console.log('Voice session inactive - audio ignored');
-                }
-            };
-            
-            // Connect audio nodes
-            this.source.connect(this.processor);
-            this.processor.connect(this.audioContext.destination);
-            
-            this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
-            
-        } catch (error) {
-            console.error('Error setting up audio streaming:', error);
-            this.showError('Failed to setup audio streaming: ' + error.message);
+    toggleVoiceLive() {
+        if (this.isVoiceSessionActive) {
+            this.stopVoiceConversation();
+            this.showToast('🔇 Voice stopped', 'info', 2000);
+        } else {
+            this.startVoiceConversation();
         }
     }
     
-    convertToPCM16(float32Array) {
-        // Convert Float32Array to 16-bit PCM
-        const buffer = new ArrayBuffer(float32Array.length * 2);
-        const view = new DataView(buffer);
-        let offset = 0;
+    updateVoiceButton(active) {
+        const btn = this.elements.voiceLiveBtn;
+        if (!btn) return;
         
-        for (let i = 0; i < float32Array.length; i++, offset += 2) {
-            const s = Math.max(-1, Math.min(1, float32Array[i]));
-            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        const text = btn.querySelector('.voice-btn-text');
+        const indicator = this.elements.voiceSessionIndicator;
+        
+        if (active) {
+            btn.classList.add('active');
+            if (text) text.textContent = 'Stop Voice';
+            if (indicator) indicator.classList.remove('hidden');
+        } else {
+            btn.classList.remove('active');
+            if (text) text.textContent = 'Start Voice';
+            if (indicator) indicator.classList.add('hidden');
         }
-        
-        return buffer;
-    }
-    
-    calculateVolume(float32Array) {
-        // Calcula RMS (Root Mean Square) para detectar nível de fala
-        let sum = 0;
-        for (let i = 0; i < float32Array.length; i++) {
-            sum += float32Array[i] * float32Array[i];
-        }
-        return Math.sqrt(sum / float32Array.length);
-    }
-    
-    extendVoiceSession() {
-        // Estende a sessão quando detectar fala
-        if (this.voiceSession.active && this.voiceSession.extendOnSpeech) {
-            this.setSessionTimeout();
-            this.showToast('⏱️ Session extended', 'info', 2000);
-            console.log('Voice session extended due to speech detection');
-        }
-    }
-    
-    activateVoiceSession() {
-        // Ativar sessão de voz temporária
-        this.voiceSession.active = true;
-        this.voiceSession.startTime = Date.now();
-        console.log('Voice session activated - Voice Live now listening');
-        
-        // Atualizar status visual
-        this.updateVoiceStatus('💬 Say \'Hey, Kami\' to start talking (lasts 20 seconds)');
-        
-        // Update wake word indicator to active state
-        this.elements.wakeWordIndicator.classList.add('active');
-        this.elements.wakeWordIndicator.classList.remove('warning');
-        
-        // Start countdown display
-        this.startCountdownDisplay();
-        
-        // Configurar timeout automático
-        this.setSessionTimeout();
-    }
-    
-    deactivateVoiceSession() {
-        // Desativar sessão de voz
-        this.voiceSession.active = false;
-        console.log('Voice session deactivated - Voice Live stopped listening');
-        
-        // Limpar timeout se existir
-        if (this.voiceSession.timeout) {
-            clearTimeout(this.voiceSession.timeout);
-            this.voiceSession.timeout = null;
-        }
-        
-        // Stop countdown display
-        this.stopCountdownDisplay();
-        
-        // Remove active/warning states
-        this.elements.wakeWordIndicator.classList.remove('active', 'warning');
-        
-        // Atualizar status visual
-        this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
-    }
-    
-    startCountdownDisplay() {
-        // Clear any existing countdown
-        this.stopCountdownDisplay();
-        
-        // Show countdown element
-        this.elements.sessionCountdown.classList.remove('hidden');
-        
-        // Track if we've shown the warning toast
-        let warningShown = false;
-        
-        // Update countdown every 100ms for smooth display
-        this.voiceSession.countdownInterval = setInterval(() => {
-            if (!this.voiceSession.active || !this.voiceSession.startTime) {
-                this.stopCountdownDisplay();
-                return;
-            }
-            
-            const elapsed = Date.now() - this.voiceSession.startTime;
-            const remaining = Math.max(0, Math.ceil((this.voiceSession.duration - elapsed) / 1000));
-            
-            // Update countdown text
-            this.elements.sessionCountdown.textContent = `${remaining}s`;
-            
-            // Show warning toast at 5 seconds
-            if (remaining === 5 && !warningShown) {
-                this.showToast('⏱️ Voice session ending in 5 seconds...', 'warning', 3000);
-                warningShown = true;
-            }
-            
-            // Add warning class when less than 5 seconds
-            if (remaining <= 5 && remaining > 0) {
-                this.elements.wakeWordIndicator.classList.add('warning');
-                this.elements.wakeWordIndicator.classList.remove('active');
-            } else if (remaining > 5) {
-                this.elements.wakeWordIndicator.classList.add('active');
-                this.elements.wakeWordIndicator.classList.remove('warning');
-            }
-            
-            // Update status message with countdown
-            if (remaining > 0) {
-                this.updateVoiceStatus(`🎤 Listening... (${remaining}s remaining)`);
-            }
-        }, 100);
-    }
-    
-    stopCountdownDisplay() {
-        // Clear countdown interval
-        if (this.voiceSession.countdownInterval) {
-            clearInterval(this.voiceSession.countdownInterval);
-            this.voiceSession.countdownInterval = null;
-        }
-        
-        // Hide countdown element
-        if (this.elements.sessionCountdown) {
-            this.elements.sessionCountdown.classList.add('hidden');
-            this.elements.sessionCountdown.textContent = '';
-        }
-    }
-    
-    setSessionTimeout() {
-        // Limpar timeout anterior se existir
-        if (this.voiceSession.timeout) {
-            clearTimeout(this.voiceSession.timeout);
-        }
-        
-        // Reset start time for countdown
-        this.voiceSession.startTime = Date.now();
-        
-        // Configurar novo timeout
-        this.voiceSession.timeout = setTimeout(() => {
-            this.deactivateVoiceSession();
-        }, this.voiceSession.duration);
-        
-        console.log(`Voice session timeout set for ${this.voiceSession.duration}ms`);
     }
     
     stopVoiceConversation() {
         if (!this.isVoiceActive) return;
         
         this.isVoiceActive = false;
+        this.isVoiceSessionActive = false;
         this.updateStatus('ready');
-        this.updateVoiceStatus('Voice conversation ready');
+        this.updateVoiceStatus('Click the voice button to start');
+        this.updateVoiceButton(false);
         
-        // Clean up audio context and processor
-        if (this.processor) {
-            this.processor.disconnect();
-            this.processor = null;
-        }
-        
-        if (this.source) {
-            this.source.disconnect();
-            this.source = null;
-        }
-        
-        if (this.audioContext && this.audioContext.state !== 'closed') {
-            this.audioContext.close();
-            this.audioContext = null;
-        }
-        
-        // Stop media stream
-        if (this.mediaStream) {
-            this.mediaStream.getTracks().forEach(track => track.stop());
-            this.mediaStream = null;
-        }
-        
-        // Close voice WebSocket
+        // Close voice WebSocket and notify server to stop Voice Live
         if (this.voiceWs) {
-            this.voiceWs.send(JSON.stringify({
-                'type': 'stop_conversation'
-            }));
+            if (this.voiceWs.readyState === WebSocket.OPEN) {
+                this.voiceWs.send(JSON.stringify({
+                    'type': 'stop_conversation'
+                }));
+            }
             this.voiceWs.close();
             this.voiceWs = null;
         }
@@ -467,18 +256,16 @@ class KamiChat {
             
             switch (data.type) {
                 case 'voice_live_started':
-                    this.updateVoiceStatus('✅ Voice ready! Say "Hey, Kami" to talk');
+                    this.updateVoiceStatus('✅ Voice ready! Speak now...');
                     break;
                     
                 case 'voice_live_connected':
-                    this.updateVoiceStatus('✅ Connected! Say "Hey, Kami" to start');
+                    this.updateVoiceStatus('✅ Connected! Speak now...');
                     break;
                     
                 case 'audio_response':
-                    // Handle audio response from Voice Live
-                    if (data.audio_data) {
-                        this.playAudioResponse(data.audio_data);
-                    }
+                    // Audio is played server-side by Voice Live API
+                    console.log('Audio response received (played on server)');
                     break;
                     
                 case 'transcript':
@@ -515,7 +302,7 @@ class KamiChat {
                 case 'session_created':
                     // Handle session creation confirmation
                     console.log('Voice Live session created:', data.session_id || 'Session active');
-                    this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
+                    this.updateVoiceStatus('🎤 Listening...');
                     break;
                     
                 case 'speech_started':
@@ -541,64 +328,6 @@ class KamiChat {
         } catch (error) {
             console.error('Error handling voice message:', error);
             this.showError('Error handling voice message: ' + error.message);
-        }
-    }
-    
-    playAudioResponse(audioData) {
-        try {
-            // Convert base64 audio data to playable format
-            const audioBytes = atob(audioData);
-            const arrayBuffer = new ArrayBuffer(audioBytes.length);
-            const uint8Array = new Uint8Array(arrayBuffer);
-            
-            for (let i = 0; i < audioBytes.length; i++) {
-                uint8Array[i] = audioBytes.charCodeAt(i);
-            }
-            
-            // Create audio context if not exists
-            if (!this.audioContext) {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            
-            // Decode and play audio
-            this.audioContext.decodeAudioData(arrayBuffer)
-                .then(audioBuffer => {
-                    const source = this.audioContext.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(this.audioContext.destination);
-                    
-                    // Store reference to stop if interrupted
-                    this.currentAudioSource = source;
-                    
-                    source.onended = () => {
-                        this.isKamiSpeaking = false;
-                        this.currentAudioSource = null;
-                        this.updateStatus('listening');
-                        
-                        // Mostrar status baseado no estado da sessão
-                        if (this.voiceSession.active) {
-                            const elapsed = Date.now() - this.voiceSession.startTime;
-                            const remaining = Math.max(0, Math.ceil((this.voiceSession.duration - elapsed) / 1000));
-                            this.updateVoiceStatus(`🎤 Listening... (${remaining}s remaining)`);
-                        } else {
-                            this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
-                        }
-                    };
-                    
-                    this.isKamiSpeaking = true;
-                    this.updateStatus('speaking');
-                    this.updateVoiceStatus('🔊 Speaking...');
-                    source.start();
-                })
-                .catch(error => {
-                    this.isKamiSpeaking = false;
-                    this.currentAudioSource = null;
-                    console.error('Error playing audio:', error);
-                    this.updateVoiceStatus('Error playing audio response');
-                });
-                
-        } catch (error) {
-            console.error('Error processing audio response:', error);
         }
     }
     
@@ -750,222 +479,6 @@ class KamiChat {
                 toast.remove();
             }
         }, 300); // Match animation duration
-    }
-    
-    // Wake word detection methods
-    initializeWakeWordDetection() {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            console.warn('Speech recognition not supported');
-            this.elements.wakeWordIndicator.style.display = 'none';
-            return;
-        }
-        
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        this.recognition = new SpeechRecognition();
-        
-        this.recognition.continuous = true;
-        this.recognition.interimResults = false;
-        this.recognition.lang = 'pt-BR';
-        
-        this.recognition.onresult = (event) => {
-            const lastResult = event.results[event.results.length - 1];
-            if (lastResult.isFinal) {
-                const transcript = lastResult[0].transcript.toLowerCase().trim();
-                console.log('Wake word detection:', transcript);
-                
-                // Melhorada detecção de wake word - mais flexível
-                const wakeWords = [
-                    'hey kami', 'ei kami', 'oi kami', 
-                    'hey camila', 'ei camila', 'oi camila',
-                    'hey kamy', 'ei kamy', 'oi kamy'
-                ];
-                
-                const foundWakeWord = wakeWords.some(word => {
-                    // Remove acentos e espaços extras para melhor matching
-                    const cleanTranscript = transcript.replace(/[áàâã]/g, 'a').replace(/[éê]/g, 'e').replace(/[íî]/g, 'i');
-                    return cleanTranscript.includes(word) || transcript.includes(word);
-                });
-                
-                if (foundWakeWord) {
-                    console.log('✅ Wake word detected!');
-                    this.triggerWakeWord();
-                }
-            }
-        };
-        
-        this.recognition.onerror = (event) => {
-            console.error('Wake word recognition error:', event.error);
-            if (event.error === 'not-allowed') {
-                this.toggleMicrophone(); // Mute if permission denied
-            }
-        };
-        
-        this.recognition.onend = () => {
-            if (this.isWakeWordListening && !this.isMicMuted) {
-                // Restart recognition if it stops unexpectedly
-                setTimeout(() => {
-                    if (this.isWakeWordListening && !this.isMicMuted) {
-                        try {
-                            this.recognition.start();
-                        } catch (e) {
-                            console.log('Recognition restart failed:', e);
-                        }
-                    }
-                }, 1000);
-            }
-        };
-        
-        this.startWakeWordDetection();
-    }
-    
-    startWakeWordDetection() {
-        if (!this.recognition || this.isMicMuted) return;
-        
-        try {
-            this.recognition.start();
-            this.isWakeWordListening = true;
-            this.updateWakeWordIndicator();
-            console.log('Wake word detection started');
-        } catch (e) {
-            console.log('Wake word detection already running');
-        }
-    }
-    
-    stopWakeWordDetection() {
-        if (!this.recognition) return;
-        
-        this.recognition.stop();
-        this.isWakeWordListening = false;
-        this.updateWakeWordIndicator();
-        console.log('Wake word detection stopped');
-    }
-    
-    toggleMicrophone() {
-        this.isMicMuted = !this.isMicMuted;
-        
-        if (this.isMicMuted) {
-            // Stop both wake word detection AND voice conversation COMPLETELY
-            this.stopWakeWordDetection();
-            
-            // Desativar sessão de voz
-            this.deactivateVoiceSession();
-            
-            // Store voice state to restore later
-            this.wasVoiceActiveBeforeMute = this.isVoiceActive;
-            
-            // NEW: Send mute command to backend Voice Live service
-            if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
-                this.voiceWs.send(JSON.stringify({
-                    'type': 'mute_voice_live',
-                    'muted': true
-                }));
-            }
-            
-            // Show toast notification
-            this.showToast('🔇 Microphone muted', 'info', 2000);
-            
-            // DON'T stop Voice Live conversation - just mute it
-            // The backend will handle the muting, keep connection alive
-            // if (this.isVoiceActive) {
-            //     this.stopVoiceConversation();
-            // }
-            
-            console.log('Microphone muted - all audio stopped');
-            this.updateVoiceStatus('🔇 Microphone muted - click to resume');
-            
-        } else {
-            // Resume both wake word detection AND voice conversation
-            this.startWakeWordDetection();
-            
-            // NEW: Send unmute command to backend Voice Live service
-            if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
-                this.voiceWs.send(JSON.stringify({
-                    'type': 'mute_voice_live',
-                    'muted': false
-                }));
-            }
-            
-            // Show toast notification
-            this.showToast('🔊 Microphone active - say "Hey, Kami"', 'success', 2000);
-            
-            // DON'T restart Voice Live conversation - it should still be connected
-            // Just unmute the backend, connection should remain active
-            // if (this.wasVoiceActiveBeforeMute) {
-            //     setTimeout(() => {
-            //         this.startVoiceConversation();
-            //     }, 500);
-            // }
-            
-            console.log('Microphone unmuted - audio resumed');
-            this.updateVoiceStatus('💬 Say "Hey, Kami" to start talking (lasts 20 seconds)');
-        }
-        
-        this.updateMicrophoneState();
-        this.updateWakeWordIndicator();
-    }
-    
-    updateMicrophoneState() {
-        const micIcon = this.elements.micMuteBtn.querySelector('.mic-icon');
-        const micMutedIcon = this.elements.micMuteBtn.querySelector('.mic-muted-icon');
-        
-        if (this.isMicMuted) {
-            this.elements.micMuteBtn.classList.add('muted');
-            micIcon.classList.add('hidden');
-            micMutedIcon.classList.remove('hidden');
-        } else {
-            this.elements.micMuteBtn.classList.remove('muted');
-            micIcon.classList.remove('hidden');
-            micMutedIcon.classList.add('hidden');
-        }
-    }
-    
-    updateWakeWordIndicator() {
-        if (this.isMicMuted) {
-            this.elements.wakeWordIndicator.classList.add('muted');
-            this.elements.wakeWordIndicator.classList.remove('triggered');
-        } else {
-            this.elements.wakeWordIndicator.classList.remove('muted');
-            if (this.isWakeWordTriggered) {
-                this.elements.wakeWordIndicator.classList.add('triggered');
-            } else {
-                this.elements.wakeWordIndicator.classList.remove('triggered');
-            }
-        }
-    }
-    
-    triggerWakeWord() {
-        console.log('Wake word triggered: Hey, Kami!');
-        this.isWakeWordTriggered = true;
-        this.updateWakeWordIndicator();
-        
-        // If Kami is speaking, interrupt her
-        if (this.isKamiSpeaking && this.currentAudioSource) {
-            console.log('Interrupting Kami - wake word detected while speaking');
-            this.currentAudioSource.stop();
-            this.currentAudioSource = null;
-            this.isKamiSpeaking = false;
-            this.showToast('🛑 Interrupted - listening now', 'info', 2000);
-        } else {
-            // Show toast notification for normal wake word detection
-            this.showToast('Wake word detected! Starting conversation...', 'success', 2000);
-        }
-        
-        // Send wake word detection to backend to start Voice Live
-        if (this.voiceWs && this.voiceWs.readyState === WebSocket.OPEN) {
-            this.voiceWs.send(JSON.stringify({
-                type: 'wake_word_detected'
-            }));
-        }
-        
-        // NOVA FUNCIONALIDADE: Ativar sessão de voz
-        this.activateVoiceSession();
-        
-        // Reset triggered state after 3 seconds
-        clearTimeout(this.wakeWordTimeout);
-        this.wakeWordTimeout = setTimeout(() => {
-            this.isWakeWordTriggered = false;
-            this.updateWakeWordIndicator();
-        }, 3000);
     }
 }
 

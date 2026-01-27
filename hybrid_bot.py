@@ -412,11 +412,8 @@ class HybridBot:
                 # Initialize Voice Live connection
                 await ws.send_str(json.dumps({
                     'type': 'status',
-                    'message': 'Voice Live connection established - waiting for wake word'
+                    'message': 'Voice Live connection established'
                 }))
-                
-                # DON'T auto-start Voice Live session - wait for wake word detection
-                # session_task = asyncio.create_task(self._handle_voice_live_session(ws))
                 
                 async for msg in ws:
                     if msg.type == WSMsgType.TEXT:
@@ -434,12 +431,13 @@ class HybridBot:
                     elif msg.type == WSMsgType.ERROR:
                         logger.error(f'Voice WebSocket error: {ws.exception()}')
                 
-                # Clean up session task
-                session_task.cancel()
-                try:
-                    await session_task
-                except asyncio.CancelledError:
-                    pass
+                # Clean up voice session if running
+                if hasattr(self, 'voice_live_task') and not self.voice_live_task.done():
+                    self.voice_live_task.cancel()
+                    try:
+                        await self.voice_live_task
+                    except asyncio.CancelledError:
+                        pass
             else:
                 await ws.send_str(json.dumps({
                     'type': 'error',
@@ -448,6 +446,9 @@ class HybridBot:
         except Exception as e:
             logger.error(f"Voice WebSocket error: {e}")
         finally:
+            # Stop Voice Live session on disconnect
+            if self.voice_live_service and self.voice_live_service.running:
+                self.voice_live_service.stop_session()
             logger.info("Voice WebSocket connection closed")
         
         return ws
@@ -592,8 +593,21 @@ class HybridBot:
         try:
             message_type = data.get('type')
             
-            if message_type == 'wake_word_detected':
-                # NEW: Start Voice Live session when wake word is detected
+            if message_type == 'start_voice_session':
+                # Start Voice Live session when button is clicked
+                logger.info("Voice session start requested via button")
+                
+                # Start Voice Live session if not already running
+                if not hasattr(self, 'voice_live_task') or self.voice_live_task.done():
+                    self.voice_live_task = asyncio.create_task(self._handle_voice_live_session(ws))
+                    
+                await ws.send_str(json.dumps({
+                    'type': 'status',
+                    'message': 'Voice Live session starting...'
+                }))
+            
+            elif message_type == 'wake_word_detected':
+                # Legacy: Start Voice Live session when wake word is detected
                 logger.info("Wake word detected - starting Voice Live session")
                 
                 # Start Voice Live session if not already running
